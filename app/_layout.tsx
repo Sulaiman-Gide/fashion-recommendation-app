@@ -1,29 +1,35 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useFonts } from "expo-font";
+import { Slot } from "expo-router";
+import React, { useState } from "react";
+import { Provider } from "react-redux";
+import store from "../store/store";
+import SplashScreenComponent from "./SplashScreen";
+import AuthStateListener from "./_authStateListener";
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+  const [appReady, setAppReady] = useState(false);
+
+  const [fontsLoaded] = useFonts({
+    "BeVietnamPro-Regular": require("../assets/fonts/BeVietnamPro-Regular.ttf"),
+    "BeVietnamPro-Bold": require("../assets/fonts/BeVietnamPro-Bold.ttf"),
+    "sofiaPro-Light": require("../assets/fonts/sofiapro-light.otf"),
+    "sofiaPro-Bold": require("../assets/fonts/SofiaProBold.ttf"),
+    "Laila-Medium": require("../assets/fonts/Laila-Medium.ttf"),
+    "Laila-SemiBold": require("../assets/fonts/Laila-SemiBold.ttf"),
   });
 
-  if (!loaded) {
-    // Async font loading only occurs in development.
-    return null;
+  if (!fontsLoaded) return null;
+
+  const handleSplashFinish = () => setAppReady(true);
+
+  if (!appReady) {
+    return <SplashScreenComponent onFinish={handleSplashFinish} />;
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <Provider store={store}>
+      <AuthStateListener />
+      <Slot />
+    </Provider>
   );
 }
