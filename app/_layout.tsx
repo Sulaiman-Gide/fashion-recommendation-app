@@ -1,10 +1,11 @@
 import { useFonts } from "expo-font";
 import { Slot } from "expo-router";
 import React, { useState } from "react";
+import { ActivityIndicator, View } from "react-native";
 import { Provider } from "react-redux";
-import store from "../store/store";
+import { PersistGate } from "redux-persist/integration/react";
+import { persistor, store } from "../store/store";
 import SplashScreenComponent from "./SplashScreen";
-import AuthStateListener from "./_authStateListener";
 
 export default function RootLayout() {
   const [appReady, setAppReady] = useState(false);
@@ -28,8 +29,18 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
-      <AuthStateListener />
-      <Slot />
+      <PersistGate
+        loading={
+          <View
+            style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+          >
+            <ActivityIndicator size="large" />
+          </View>
+        }
+        persistor={persistor}
+      >
+        <Slot />
+      </PersistGate>
     </Provider>
   );
 }
