@@ -85,7 +85,7 @@ const Login = () => {
   }, [email, password, dispatch, router]);
 
   const isButtonDisabled = useMemo(() => {
-    return !email || password.length < 6;
+    return !email || password.length < 3;
   }, [email, password]);
 
   return (
