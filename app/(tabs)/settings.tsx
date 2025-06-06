@@ -25,7 +25,6 @@ export default function SettingsTabScreen() {
             await persistor.purge();
             dispatch(setAuthenticated(false));
             dispatch(setToken(null));
-            console.log("Logged out and Redux state updated.");
           } catch (error) {
             console.error("Logout error:", error);
           }
