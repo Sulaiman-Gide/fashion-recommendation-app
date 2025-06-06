@@ -1,6 +1,12 @@
 import CustomToast from "@/components/CustomToast";
+import {
+  setAuthenticated,
+  setHasSeenOnboarding,
+  setToken,
+} from "@/store/authSlice";
 import { Fontisto, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import { StatusBar } from "expo-status-bar";
 import LottieView from "lottie-react-native";
 import React, { useCallback, useMemo, useRef, useState } from "react";
@@ -18,7 +24,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch } from "react-redux";
-import { setAuthenticated, setToken } from "../../store/authSlice";
 
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -50,8 +55,10 @@ const Login = () => {
       );
       const user = userCredential.user;
 
+      await SecureStore.setItemAsync("uid", user.uid);
       dispatch(setAuthenticated(true));
       dispatch(setToken(await user.getIdToken()));
+      dispatch(setHasSeenOnboarding(true));
 
       setToastMessage("Login successful.");
       setToastType("success");

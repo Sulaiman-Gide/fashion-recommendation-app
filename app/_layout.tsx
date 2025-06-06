@@ -1,11 +1,42 @@
+import { useFirebaseAuthListener } from "@/hooks/useFirebaseAuthListener";
+import { rehydrate } from "@/store/authSlice";
+import { persistor, store } from "@/store/store";
 import { useFonts } from "expo-font";
 import { Slot } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
-import { persistor, store } from "../store/store";
 import SplashScreenComponent from "./SplashScreen";
+
+function AppContent() {
+  useFirebaseAuthListener();
+  return <Slot />;
+}
+
+function PersistGateWrapper({ children }: { children: React.ReactNode }) {
+  const [rehydrated, setRehydrated] = useState(false);
+  const { dispatch } = store;
+
+  return (
+    <PersistGate
+      loading={
+        <View
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <ActivityIndicator size="large" />
+        </View>
+      }
+      persistor={persistor}
+      onBeforeLift={() => {
+        dispatch(rehydrate());
+        setRehydrated(true);
+      }}
+    >
+      {children}
+    </PersistGate>
+  );
+}
 
 export default function RootLayout() {
   const [appReady, setAppReady] = useState(false);
@@ -29,18 +60,9 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
-      <PersistGate
-        loading={
-          <View
-            style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-          >
-            <ActivityIndicator size="large" />
-          </View>
-        }
-        persistor={persistor}
-      >
-        <Slot />
-      </PersistGate>
+      <PersistGateWrapper>
+        <AppContent />
+      </PersistGateWrapper>
     </Provider>
   );
 }

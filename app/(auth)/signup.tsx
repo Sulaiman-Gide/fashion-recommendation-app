@@ -2,6 +2,7 @@ import CustomToast from "@/components/CustomToast";
 import { setAuthenticated, setToken } from "@/store/authSlice";
 import { Fontisto, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import { StatusBar } from "expo-status-bar";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import LottieView from "lottie-react-native";
@@ -61,6 +62,7 @@ const Signup: React.FC = () => {
         lastSeen: new Date().toISOString(),
       });
 
+      await SecureStore.setItemAsync("uid", user.uid);
       dispatch(setAuthenticated(true));
       dispatch(setToken(await user.getIdToken()));
 

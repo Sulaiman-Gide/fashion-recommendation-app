@@ -5,7 +5,7 @@ import { RootState } from "../../store/store";
 import AuthNavigator from "../navigation/AuthNavigator";
 
 export default function AuthLayout() {
-  const { isAuthenticated, hasSeenOnboarding } = useSelector(
+  const { isAuthenticated, hasSeenOnboarding, isAuthReady } = useSelector(
     (state: RootState) => state.auth
   );
   const router = useRouter();
@@ -21,7 +21,16 @@ export default function AuthLayout() {
     }
   }, [mounted, isAuthenticated, router]);
 
+  if (!mounted || !isAuthReady) {
+    return null;
+  }
+
+  if (isAuthenticated) {
+    // Don't render anything if authenticated, navigation will handle redirect
+    return null;
+  }
+
   const initialRoute = hasSeenOnboarding ? "Login" : "Onboarding";
 
-  return mounted ? <AuthNavigator initialRouteName={initialRoute} /> : null;
+  return <AuthNavigator initialRouteName={initialRoute} />;
 }
