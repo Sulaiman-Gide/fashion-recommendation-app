@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.dev-gide.fashionApp"
+      "bundleIdentifier": "com.dev-gide.fashionApp",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Allow Barakat Collections to use Face ID."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -26,7 +29,8 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-local-authentication"
     ],
     "experiments": {
       "typedRoutes": true

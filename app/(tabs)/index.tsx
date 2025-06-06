@@ -55,7 +55,14 @@ export default function HomeTabScreen() {
   }, [dispatch]);
 
   return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+    <View
+      style={{
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#fff",
+      }}
+    >
       <CustomToast
         message={toastMessage}
         type="error"
