@@ -38,6 +38,7 @@ export default function ProfileTabScreen() {
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
   const [isBiometricEnabled, setIsBiometricEnabled] = useState(false);
+  const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -70,7 +71,11 @@ export default function ProfileTabScreen() {
     const checkBiometrics = async () => {
       const compatible = await LocalAuthentication.hasHardwareAsync();
       const enrolled = await LocalAuthentication.isEnrolledAsync();
-      setIsBiometricEnabled(compatible && enrolled);
+      setIsBiometricAvailable(compatible && enrolled);
+
+      // Restore user's preference from SecureStore
+      const biometricPref = await SecureStore.getItemAsync("biometricEnabled");
+      setIsBiometricEnabled(biometricPref === "true");
     };
     checkBiometrics();
   }, []);
@@ -99,8 +104,17 @@ export default function ProfileTabScreen() {
     const isSimulator = Platform.OS === "ios" && !Device.isDevice;
 
     if (value) {
+      if (!isBiometricAvailable && !isSimulator) {
+        setToastMessage(
+          "Biometric authentication is not available or not enrolled on this device."
+        );
+        setToastType("error");
+        setToastVisible(true);
+        return;
+      }
       if (isSimulator) {
         setIsBiometricEnabled(true);
+        await SecureStore.setItemAsync("biometricEnabled", "true");
         setToastMessage("Simulated biometric success.");
         setToastType("success");
         setToastVisible(true);
@@ -113,6 +127,7 @@ export default function ProfileTabScreen() {
 
       if (result.success) {
         setIsBiometricEnabled(true);
+        await SecureStore.setItemAsync("biometricEnabled", "true");
         setToastMessage("Biometric authentication enabled.");
         setToastType("success");
         setToastVisible(true);
@@ -123,6 +138,7 @@ export default function ProfileTabScreen() {
       }
     } else {
       setIsBiometricEnabled(false);
+      await SecureStore.setItemAsync("biometricEnabled", "false");
       setToastMessage("Biometric login disabled.");
       setToastType("success");
       setToastVisible(true);
