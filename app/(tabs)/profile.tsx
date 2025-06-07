@@ -3,6 +3,7 @@ import { setAuthenticated, setToken } from "@/store/authSlice";
 import { persistor } from "@/store/store";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import * as LocalAuthentication from "expo-local-authentication";
+import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
@@ -23,6 +24,7 @@ import PersonAvatar from "@/assets/images/personAvatar.svg";
 import Spinner from "@/assets/Lottie/appLoadingWhite.json";
 
 export default function ProfileTabScreen() {
+  const router = useRouter();
   const dispatch = useDispatch();
   const [authUser, setAuthUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -106,7 +108,7 @@ export default function ProfileTabScreen() {
           loop
           style={{ width: 100, height: 100 }}
         />
-        <Text style={{ marginTop: 20 }}>Loading profile...</Text>
+        <Text style={styles.loadingText}>Loading profile...</Text>
       </View>
     );
   }
@@ -117,10 +119,10 @@ export default function ProfileTabScreen() {
         <View style={styles.avatarContainer}>
           <PersonAvatar width={88} height={88} />
         </View>
-        <Text style={styles.name}>
+        <Text style={styles.nameText}>
           {userProfile?.name || authUser?.displayName || "User"}
         </Text>
-        <Text style={styles.email}>{authUser?.email}</Text>
+        <Text style={styles.emailText}>{authUser?.email}</Text>
       </View>
 
       <View style={styles.section}>
@@ -141,7 +143,10 @@ export default function ProfileTabScreen() {
           />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.optionRow}>
+        <TouchableOpacity
+          style={styles.optionRow}
+          onPress={() => router.push("/EditProfile")}
+        >
           <MaterialIcons name="edit" size={22} color="#444" />
           <Text style={styles.optionText}>Edit Profile</Text>
         </TouchableOpacity>
@@ -161,25 +166,31 @@ export default function ProfileTabScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#f9fafb",
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#fff",
+  },
+  loadingText: {
+    fontSize: 15,
+    marginTop: 20,
+    fontFamily: "BeVietnamPro-Regular",
+    color: "#555",
   },
   headerCard: {
     alignItems: "center",
-    paddingTop: 50,
-    paddingBottom: 30,
+    paddingVertical: 40,
+    paddingHorizontal: 20,
     backgroundColor: "#fff",
     margin: 16,
     borderRadius: 24,
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
   avatarContainer: {
@@ -192,45 +203,47 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 12,
   },
-  name: {
+  nameText: {
     fontSize: 20,
-    fontWeight: "700",
-    color: "#222",
+    fontFamily: "BeVietnamPro-Bold",
+    color: "#111",
   },
-  email: {
+  emailText: {
     fontSize: 14,
+    fontFamily: "BeVietnamPro-Regular",
     color: "#666",
     marginTop: 4,
   },
   section: {
-    marginTop: 12,
+    marginTop: 20,
     paddingHorizontal: 20,
-    gap: 10,
+    gap: 12,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 15,
+    fontFamily: "BeVietnamPro-Bold",
     color: "#333",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   optionRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
+    backgroundColor: "#fff",
+    borderRadius: 16,
     gap: 14,
     shadowColor: "#000",
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 1,
   },
   optionText: {
-    fontSize: 16,
-    color: "#222",
     flex: 1,
+    fontSize: 15,
+    fontFamily: "BeVietnamPro-Regular",
+    color: "#222",
   },
   logoutRow: {
     backgroundColor: "#fff5f5",
@@ -238,6 +251,6 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: "#ff4d4d",
-    fontWeight: "600",
+    fontFamily: "BeVietnamPro-Bold",
   },
 });
