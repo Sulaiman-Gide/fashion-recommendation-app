@@ -1,16 +1,24 @@
+import PersonAvatar from "@/assets/images/personAvatar.svg";
+import CustomToast from "@/components/CustomToast";
 import { auth, db } from "@/lib/firebase";
 import { setAuthenticated, setToken } from "@/store/authSlice";
 import { persistor } from "@/store/store";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import {
+  Ionicons,
+  MaterialCommunityIcons,
+  MaterialIcons,
+} from "@expo/vector-icons";
+import * as Device from "expo-device";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import LottieView from "lottie-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  Platform,
   StyleSheet,
   Switch,
   Text,
@@ -20,15 +28,15 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch } from "react-redux";
 
-import PersonAvatar from "@/assets/images/personAvatar.svg";
-import Spinner from "@/assets/Lottie/appLoadingWhite.json";
-
 export default function ProfileTabScreen() {
   const router = useRouter();
   const dispatch = useDispatch();
   const [authUser, setAuthUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
   const [isBiometricEnabled, setIsBiometricEnabled] = useState(false);
 
   useEffect(() => {
@@ -87,79 +95,105 @@ export default function ProfileTabScreen() {
     ]);
   }, [dispatch]);
 
-  const handleBiometricToggle = async () => {
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: "Authenticate to enable biometric login",
-    });
-    if (result.success) {
-      Alert.alert("Enabled", "Biometric authentication enabled.");
-      setIsBiometricEnabled(true);
+  const handleBiometricToggle = async (value: boolean) => {
+    const isSimulator = Platform.OS === "ios" && !Device.isDevice;
+
+    if (value) {
+      if (isSimulator) {
+        setIsBiometricEnabled(true);
+        setToastMessage("Simulated biometric success.");
+        setToastType("success");
+        setToastVisible(true);
+        return;
+      }
+
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: "Authenticate to enable biometric login",
+      });
+
+      if (result.success) {
+        setIsBiometricEnabled(true);
+        setToastMessage("Biometric authentication enabled.");
+        setToastType("success");
+        setToastVisible(true);
+      } else {
+        setToastMessage("Authentication failed.");
+        setToastType("error");
+        setToastVisible(true);
+      }
     } else {
-      Alert.alert("Failed", "Authentication failed.");
+      setIsBiometricEnabled(false);
+      setToastMessage("Biometric login disabled.");
+      setToastType("success");
+      setToastVisible(true);
     }
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <LottieView
-          source={Spinner}
-          autoPlay
-          loop
-          style={{ width: 100, height: 100 }}
-        />
-        <Text style={styles.loadingText}>Loading profile...</Text>
+        <ActivityIndicator size="large" color="#FF6347" />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.headerCard}>
-        <View style={styles.avatarContainer}>
-          <PersonAvatar width={88} height={88} />
+    <>
+      <CustomToast
+        visible={toastVisible}
+        message={toastMessage}
+        type={toastType}
+        onHide={() => setToastVisible(false)}
+      />
+      <SafeAreaView style={styles.container}>
+        <View style={styles.headerCard}>
+          <View style={styles.avatarContainer}>
+            <PersonAvatar width={88} height={88} />
+          </View>
+          <Text style={styles.nameText}>
+            {userProfile?.name || authUser?.displayName || "User"}
+          </Text>
+          <Text style={styles.emailText}>{authUser?.email}</Text>
         </View>
-        <Text style={styles.nameText}>
-          {userProfile?.name || authUser?.displayName || "User"}
-        </Text>
-        <Text style={styles.emailText}>{authUser?.email}</Text>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account Settings</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account Settings</Text>
 
-        <TouchableOpacity
-          style={styles.optionRow}
-          onPress={handleBiometricToggle}
-        >
-          <Ionicons name="finger-print" size={22} color="#444" />
-          <Text style={styles.optionText}>Enable Biometric Login</Text>
-          <Switch
-            trackColor={{ false: "#ccc", true: "#FF6347" }}
-            thumbColor={isBiometricEnabled ? "#fff" : "#eee"}
-            ios_backgroundColor="#ccc"
-            value={isBiometricEnabled}
-            onValueChange={handleBiometricToggle}
-          />
-        </TouchableOpacity>
+          {/* Biometric Toggle */}
+          <View style={styles.optionRow}>
+            <Ionicons name="finger-print" size={22} color="#444" />
+            <Text style={styles.optionText}>Enable Biometric Login</Text>
+            <Switch
+              trackColor={{ false: "#ccc", true: "#FF6347" }}
+              thumbColor={isBiometricEnabled ? "#fff" : "#eee"}
+              ios_backgroundColor="#ccc"
+              value={isBiometricEnabled}
+              onValueChange={handleBiometricToggle}
+            />
+          </View>
 
-        <TouchableOpacity
-          style={styles.optionRow}
-          onPress={() => router.push("/EditProfile")}
-        >
-          <MaterialIcons name="edit" size={22} color="#444" />
-          <Text style={styles.optionText}>Edit Profile</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.optionRow}
+            onPress={() => router.push("/EditProfile")}
+          >
+            <MaterialCommunityIcons
+              name="account-edit"
+              size={24}
+              color="#444"
+            />
+            <Text style={styles.optionText}>Edit Profile</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.optionRow, styles.logoutRow]}
-          onPress={handleLogout}
-        >
-          <MaterialIcons name="logout" size={22} color="#ff4d4d" />
-          <Text style={[styles.optionText, styles.logoutText]}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+          <TouchableOpacity
+            style={[styles.optionRow, styles.logoutRow]}
+            onPress={handleLogout}
+          >
+            <MaterialIcons name="logout" size={23} color="#ff4d4d" />
+            <Text style={[styles.optionText, styles.logoutText]}>Logout</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </>
   );
 }
 
@@ -173,12 +207,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#fff",
-  },
-  loadingText: {
-    fontSize: 15,
-    marginTop: 20,
-    fontFamily: "BeVietnamPro-Regular",
-    color: "#555",
   },
   headerCard: {
     alignItems: "center",
@@ -205,11 +233,12 @@ const styles = StyleSheet.create({
   },
   nameText: {
     fontSize: 20,
-    fontFamily: "BeVietnamPro-Bold",
+    fontFamily: "BeVietnamPro-Medium",
+    fontWeight: "600",
     color: "#111",
   },
   emailText: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: "BeVietnamPro-Regular",
     color: "#666",
     marginTop: 4,
@@ -221,7 +250,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 15,
-    fontFamily: "BeVietnamPro-Bold",
+    fontFamily: "BeVietnamPro-Medium",
+    fontWeight: "600",
     color: "#333",
     marginBottom: 8,
   },
@@ -250,7 +280,9 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   logoutText: {
+    fontSize: 17,
     color: "#ff4d4d",
-    fontFamily: "BeVietnamPro-Bold",
+    fontFamily: "BeVietnamPro-Medium",
+    fontWeight: "500",
   },
 });

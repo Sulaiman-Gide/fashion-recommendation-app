@@ -116,7 +116,8 @@ const styles = StyleSheet.create({
   message: {
     color: "#fff",
     fontSize: 15,
-    fontWeight: "500",
+    fontWeight: "400",
     flexShrink: 1,
+    fontFamily: "BeVietnamPro-Regular",
   },
 });

@@ -1,3 +1,4 @@
+import CustomToast from "@/components/CustomToast";
 import { db } from "@/lib/firebase";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -6,7 +7,6 @@ import { doc, getDoc, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,7 +22,20 @@ export default function EditProfile() {
   const [age, setAge] = useState("");
   const [bio, setBio] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+
+  const showToast = (
+    message: string,
+    type: "success" | "error" = "success"
+  ) => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastVisible(true);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -43,26 +56,32 @@ export default function EditProfile() {
   }, []);
 
   const handleSave = async () => {
-    if (!name.trim()) return Alert.alert("Validation", "Name is required.");
+    if (!name.trim()) return showToast("Name is required.", "error");
     if (age && (isNaN(Number(age)) || Number(age) <= 0)) {
-      return Alert.alert("Validation", "Enter a valid age.");
+      return showToast("Enter a valid age.", "error");
     }
 
     const uid = await SecureStore.getItemAsync("uid");
     if (!uid) return;
 
     try {
+      setSaving(true);
       await updateDoc(doc(db, "users", uid), {
         name: name.trim(),
         age: age ? Number(age) : null,
         bio: bio.trim(),
         phoneNumber: phoneNumber.trim(),
       });
-      Alert.alert("Success", "Profile updated successfully.");
-      router.back();
+      showToast("Profile updated successfully.", "success");
+      setSaving(false);
+      setTimeout(() => {
+        setSaving(false);
+        router.navigate("/(tabs)/profile");
+      }, 3000);
     } catch (err) {
-      console.error("Error updating profile:", err);
-      Alert.alert("Error", "Something went wrong while updating.");
+      console.log("Error updating profile:", err);
+      setSaving(false);
+      showToast("Something went wrong while updating.", "error");
     }
   };
 
@@ -75,71 +94,88 @@ export default function EditProfile() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <TouchableOpacity onPress={router.back} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
+    <>
+      <CustomToast
+        message={toastMessage}
+        type={toastType}
+        visible={toastVisible}
+        onHide={() => setToastVisible(false)}
+      />
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+        <ScrollView contentContainerStyle={styles.container}>
+          <TouchableOpacity
+            onPress={() => router.navigate("/(tabs)/profile")}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </TouchableOpacity>
 
-        <Text style={styles.title}>Edit Profile</Text>
+          <Text style={styles.title}>Edit Profile</Text>
 
-        {/* Full Name */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Full Name</Text>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            style={styles.input}
-            placeholder="Enter your full name"
-            placeholderTextColor="#aaa"
-          />
-        </View>
+          {/* Full Name */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Full Name</Text>
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              style={styles.input}
+              placeholder="Enter your full name"
+              placeholderTextColor="#aaa"
+            />
+          </View>
 
-        {/* Age */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Age</Text>
-          <TextInput
-            value={age}
-            onChangeText={setAge}
-            style={styles.input}
-            placeholder="Enter your age"
-            placeholderTextColor="#aaa"
-            keyboardType="numeric"
-          />
-        </View>
+          {/* Age */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Age</Text>
+            <TextInput
+              value={age}
+              onChangeText={setAge}
+              style={styles.input}
+              placeholder="Enter your age"
+              placeholderTextColor="#aaa"
+              keyboardType="numeric"
+            />
+          </View>
 
-        {/* Phone Number */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Phone Number</Text>
-          <TextInput
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-            style={styles.input}
-            placeholder="Enter your phone number"
-            placeholderTextColor="#aaa"
-            keyboardType="phone-pad"
-          />
-        </View>
+          {/* Phone Number */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Phone Number</Text>
+            <TextInput
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              style={styles.input}
+              placeholder="Enter your phone number"
+              placeholderTextColor="#aaa"
+              keyboardType="phone-pad"
+            />
+          </View>
 
-        {/* Bio */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Short Bio</Text>
-          <TextInput
-            value={bio}
-            onChangeText={setBio}
-            style={[styles.input, styles.bioInput]}
-            placeholder="Write a short bio"
-            placeholderTextColor="#aaa"
-            multiline
-            numberOfLines={4}
-          />
-        </View>
+          {/* Bio */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Short Bio</Text>
+            <TextInput
+              value={bio}
+              onChangeText={setBio}
+              style={[styles.input, styles.bioInput]}
+              placeholder="Write a short bio"
+              placeholderTextColor="#aaa"
+              multiline
+              numberOfLines={4}
+            />
+          </View>
 
-        <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-          <Text style={styles.saveButtonText}>Save Changes</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+          <TouchableOpacity
+            onPress={handleSave}
+            style={[styles.saveButton, saving && { opacity: 0.7 }]}
+            disabled={saving}
+          >
+            <Text style={styles.saveButtonText}>
+              {saving ? "Updating..." : "Save Changes"}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    </>
   );
 }
 
@@ -156,10 +192,11 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   title: {
-    fontSize: 22,
-    fontFamily: "BeVietnamPro-Bold",
+    fontSize: 20,
+    fontFamily: "BeVietnamPro-Medium",
+    fontWeight: "500",
     marginBottom: 22,
-    color: "#333",
+    color: "#212121",
     textAlign: "center",
   },
   backButton: {
@@ -171,10 +208,10 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 100,
     shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 1, height: 2 },
+    shadowRadius: 6,
+    elevation: 2,
   },
   field: {
     marginTop: 10,
@@ -183,7 +220,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 6,
     fontFamily: "BeVietnamPro-Medium",
-    color: "#444",
+    color: "#212121",
   },
   input: {
     borderWidth: 1,
