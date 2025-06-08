@@ -5,6 +5,7 @@ import { RootState } from "../../store/store";
 
 import { FashionTabBar } from "@/components/FashionTabBar";
 import { Colors } from "@/constants/Colors";
+import { ThemeProvider } from "@/context/ThemeContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
 
 export default function TabLayout() {
@@ -26,37 +27,46 @@ export default function TabLayout() {
   }, [mounted, isAuthenticated, router]);
 
   return mounted ? (
-    <Tabs
-      tabBar={FashionTabBar}
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "dark"].tint,
-        headerShown: false,
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
+    <ThemeProvider>
+      <Tabs
+        tabBar={(props) => <FashionTabBar {...props} />}
+        screenOptions={{
+          tabBarActiveTintColor: Colors[colorScheme ?? "dark"].tint,
+          headerShown: false,
         }}
-      />
-      <Tabs.Screen
-        name="recommendations"
-        options={{
-          title: "Recommendations",
-        }}
-      />
-      <Tabs.Screen
-        name="cart"
-        options={{
-          title: "Cart",
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: "Home",
+          }}
+        />
+        <Tabs.Screen
+          name="recommendations"
+          options={{
+            title: "Recommendations",
+          }}
+        />
+        <Tabs.Screen
+          name="cart"
+          options={{
+            title: "Cart",
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: "Profile",
+          }}
+        />
+        <Tabs.Screen
+          name="editProfile"
+          options={{
+            title: "Profile",
+            tabBarButton: () => null,
+          }}
+        />
+      </Tabs>
+    </ThemeProvider>
   ) : null;
 }

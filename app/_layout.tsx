@@ -1,3 +1,4 @@
+import { ThemeProvider } from "@/context/ThemeContext";
 import { useFirebaseAuthListener } from "@/hooks/useFirebaseAuthListener";
 import { rehydrate } from "@/store/authSlice";
 import { persistor, store } from "@/store/store";
@@ -61,7 +62,9 @@ export default function RootLayout() {
   return (
     <Provider store={store}>
       <PersistGateWrapper>
-        <AppContent />
+        <ThemeProvider>
+          <AppContent />
+        </ThemeProvider>
       </PersistGateWrapper>
     </Provider>
   );

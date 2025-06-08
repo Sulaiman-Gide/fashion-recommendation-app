@@ -1,3 +1,4 @@
+import { useTheme } from "@/context/ThemeContext";
 import React from "react";
 import {
   Platform,
@@ -7,7 +8,6 @@ import {
   View,
 } from "react-native";
 
-// Import SVGs as React components
 import CartFilled from "../assets/tab-icons/cart-filled.svg";
 import CartOutline from "../assets/tab-icons/cart-outline.svg";
 import HomeFilled from "../assets/tab-icons/home-filled.svg";
@@ -43,16 +43,39 @@ const TAB_LABELS: Record<string, string> = {
   index: "Home",
   recommendations: "For You",
   cart: "Cart",
-  settings: "Profile",
+  profile: "Profile",
 };
 
 export function FashionTabBar({ state, descriptors, navigation }: any) {
+  const { isDarkMode } = useTheme();
+
   return (
-    <View style={styles.outerContainer}>
-      <View style={styles.tabBarBg}>
+    <View
+      style={[
+        styles.outerContainer,
+        {
+          backgroundColor: isDarkMode ? "#1a1a1a" : "#edeef0",
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.tabBarBg,
+          {
+            backgroundColor: isDarkMode ? "#2a2a2a" : "#DCDCDC30",
+          },
+        ]}
+      >
         <View style={styles.tabContainer}>
           {state.routes.map((route: any, index: number) => {
             const { options } = descriptors[route.key];
+            if (
+              typeof options.tabBarButton === "function" &&
+              options.tabBarButton() === null
+            ) {
+              return null;
+            }
+
             const label =
               options.tabBarLabel !== undefined
                 ? options.tabBarLabel
@@ -91,12 +114,25 @@ export function FashionTabBar({ state, descriptors, navigation }: any) {
                 <View
                   style={[
                     styles.iconWrapper,
-                    isFocused && styles.iconWrapperActive,
+                    isFocused && {
+                      backgroundColor: isDarkMode
+                        ? "rgba(255,255,255,0.1)"
+                        : "rgba(230,231,230,0.08)",
+                    },
                   ]}
                 >
                   {IconComponent && <IconComponent width={26} height={26} />}
                 </View>
-                <Text style={[styles.label, isFocused && styles.labelActive]}>
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color: isDarkMode ? "#f2f2f2" : "#212121",
+                      opacity: isFocused ? 1 : 0.6,
+                      fontWeight: isFocused ? "700" : "500",
+                    },
+                  ]}
+                >
                   {TAB_LABELS[route.name] || label}
                 </Text>
               </TouchableOpacity>
@@ -115,15 +151,10 @@ const styles = StyleSheet.create({
     right: 14,
     bottom: Platform.OS === "ios" ? 32 : 16,
     borderRadius: 28,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 10,
+
     overflow: "visible",
   },
   tabBarBg: {
-    backgroundColor: "#DCDCDC30",
     borderRadius: 28,
     paddingVertical: 6,
     paddingHorizontal: 6,
@@ -146,20 +177,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "transparent",
   },
-  iconWrapperActive: {
-    backgroundColor: "rgba(230,231,230,0.08)",
-  },
   label: {
     fontSize: 12,
-    color: "#212121",
-    fontWeight: "500",
-    marginTop: 2,
+    marginTop: 4,
     letterSpacing: 0.2,
-    opacity: 0.7,
-  },
-  labelActive: {
-    color: "rgba(13, 14, 13, 0.57)",
-    fontWeight: "700",
-    opacity: 1,
   },
 });

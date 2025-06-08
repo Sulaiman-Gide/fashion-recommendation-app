@@ -1,5 +1,6 @@
 import PersonAvatar from "@/assets/images/personAvatar.svg";
 import CustomToast from "@/components/CustomToast";
+import { useTheme } from "@/context/ThemeContext";
 import { auth, db } from "@/lib/firebase";
 import { setAuthenticated, setToken } from "@/store/authSlice";
 import { persistor } from "@/store/store";
@@ -39,6 +40,7 @@ export default function ProfileTabScreen() {
   const [toastType, setToastType] = useState<"success" | "error">("success");
   const [isBiometricEnabled, setIsBiometricEnabled] = useState(false);
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
+  const { isDarkMode, toggleTheme } = useTheme();
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -144,6 +146,7 @@ export default function ProfileTabScreen() {
       setToastVisible(true);
     }
   };
+  const styles = getStyles(isDarkMode);
 
   if (loading) {
     return (
@@ -188,9 +191,32 @@ export default function ProfileTabScreen() {
             />
           </View>
 
+          <View style={styles.optionRow}>
+            <Ionicons
+              name="moon"
+              size={22}
+              color={isDarkMode ? "#eee" : "#444"}
+            />
+            <Text
+              style={[
+                styles.optionText,
+                { color: isDarkMode ? "#eee" : "#222" },
+              ]}
+            >
+              Dark Mode
+            </Text>
+            <Switch
+              trackColor={{ false: "#ccc", true: "#444" }}
+              thumbColor={isDarkMode ? "#fff" : "#eee"}
+              ios_backgroundColor="#ccc"
+              value={isDarkMode}
+              onValueChange={toggleTheme}
+            />
+          </View>
+
           <TouchableOpacity
             style={styles.optionRow}
-            onPress={() => router.push("/EditProfile")}
+            onPress={() => router.push("/editProfile")}
           >
             <MaterialCommunityIcons
               name="account-edit"
@@ -213,92 +239,93 @@ export default function ProfileTabScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f9fafb",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  headerCard: {
-    alignItems: "center",
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    backgroundColor: "#fff",
-    margin: 16,
-    borderRadius: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  avatarContainer: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    overflow: "hidden",
-    backgroundColor: "#f0f0f0",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  nameText: {
-    fontSize: 20,
-    fontFamily: "BeVietnamPro-Medium",
-    fontWeight: "600",
-    color: "#111",
-  },
-  emailText: {
-    fontSize: 15,
-    fontFamily: "BeVietnamPro-Regular",
-    color: "#666",
-    marginTop: 4,
-  },
-  section: {
-    marginTop: 20,
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontFamily: "BeVietnamPro-Medium",
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 8,
-  },
-  optionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    gap: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  optionText: {
-    flex: 1,
-    fontSize: 15,
-    fontFamily: "BeVietnamPro-Regular",
-    color: "#222",
-  },
-  logoutRow: {
-    backgroundColor: "#fff5f5",
-    marginTop: 12,
-  },
-  logoutText: {
-    fontSize: 17,
-    color: "#ff4d4d",
-    fontFamily: "BeVietnamPro-Medium",
-    fontWeight: "500",
-  },
-});
+const getStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#000" : "#f9fafb",
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#000" : "#fff",
+    },
+    headerCard: {
+      alignItems: "center",
+      paddingVertical: 40,
+      paddingHorizontal: 20,
+      backgroundColor: isDarkMode ? "#111" : "#fff",
+      margin: 16,
+      borderRadius: 24,
+      shadowColor: "#000",
+      shadowOpacity: 0.05,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 4,
+    },
+    avatarContainer: {
+      width: 88,
+      height: 88,
+      borderRadius: 44,
+      overflow: "hidden",
+      backgroundColor: isDarkMode ? "#222" : "#f0f0f0",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 12,
+    },
+    nameText: {
+      fontSize: 20,
+      fontFamily: "BeVietnamPro-Medium",
+      fontWeight: "600",
+      color: isDarkMode ? "#fff" : "#111",
+    },
+    emailText: {
+      fontSize: 15,
+      fontFamily: "BeVietnamPro-Regular",
+      color: isDarkMode ? "#aaa" : "#666",
+      marginTop: 4,
+    },
+    section: {
+      marginTop: 20,
+      paddingHorizontal: 20,
+      gap: 12,
+    },
+    sectionTitle: {
+      fontSize: 15,
+      fontFamily: "BeVietnamPro-Medium",
+      fontWeight: "600",
+      color: isDarkMode ? "#eee" : "#333",
+      marginBottom: 8,
+    },
+    optionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      backgroundColor: isDarkMode ? "#1a1a1a" : "#fff",
+      borderRadius: 16,
+      gap: 14,
+      shadowColor: "#000",
+      shadowOpacity: 0.03,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1,
+    },
+    optionText: {
+      flex: 1,
+      fontSize: 15,
+      fontFamily: "BeVietnamPro-Regular",
+      color: isDarkMode ? "#eee" : "#222",
+    },
+    logoutRow: {
+      backgroundColor: isDarkMode ? "#331111" : "#fff5f5",
+      marginTop: 12,
+    },
+    logoutText: {
+      fontSize: 17,
+      color: "#ff4d4d",
+      fontFamily: "BeVietnamPro-Medium",
+      fontWeight: "500",
+    },
+  });
