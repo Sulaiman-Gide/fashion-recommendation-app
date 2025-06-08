@@ -10,10 +10,9 @@ import { AntDesign } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   ScrollView,
   StatusBar,
@@ -25,49 +24,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch } from "react-redux";
-
-const products = [
-  {
-    id: "1",
-    name: "Classic White Tee",
-    image: require("@/assets/images/photo-1.jpg"),
-    price: 19.99,
-    oldPrice: 29.99,
-    rating: 4.3,
-  },
-  {
-    id: "2",
-    name: "Denim Jacket",
-    image: require("@/assets/images/photo-4.jpg"),
-    price: 49.99,
-    oldPrice: 69.99,
-    rating: 3.6,
-  },
-  {
-    id: "3",
-    name: "Summer Dress",
-    image: require("@/assets/images/photo-5.jpg"),
-    price: 34.99,
-    oldPrice: 44.99,
-    rating: 3.5,
-  },
-  {
-    id: "4",
-    name: "Summer Dress",
-    image: require("@/assets/images/photo-3.jpg"),
-    price: 34.99,
-    oldPrice: 44.99,
-    rating: 4.5,
-  },
-  {
-    id: "5",
-    name: "Summer Dress",
-    image: require("@/assets/images/photo-4.jpg"),
-    price: 34.99,
-    oldPrice: 44.99,
-    rating: 3.5,
-  },
-];
 
 const chunkArray = (arr: any[], size: number) =>
   Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
@@ -89,6 +45,92 @@ export default function HomeTabScreen() {
   const { isDarkMode } = useTheme();
   const styles = getStyles(isDarkMode);
 
+  // Skeleton loader for product cards
+  const ProductSkeleton = () => (
+    <View style={styles.productCardGrid}>
+      <View style={[styles.productImage, { backgroundColor: "#e5e7eb" }]} />
+      <View style={{ paddingHorizontal: 5 }}>
+        <View
+          style={{
+            height: 16,
+            width: "70%",
+            backgroundColor: "#e5e7eb",
+            borderRadius: 4,
+            marginBottom: 8,
+          }}
+        />
+        <View
+          style={{
+            height: 14,
+            width: "40%",
+            backgroundColor: "#e5e7eb",
+            borderRadius: 4,
+            marginBottom: 6,
+          }}
+        />
+        <View style={{ flexDirection: "row", gap: 6 }}>
+          <View
+            style={{
+              height: 14,
+              width: 40,
+              backgroundColor: "#e5e7eb",
+              borderRadius: 4,
+            }}
+          />
+          <View
+            style={{
+              height: 14,
+              width: 30,
+              backgroundColor: "#e5e7eb",
+              borderRadius: 4,
+            }}
+          />
+        </View>
+      </View>
+    </View>
+  );
+
+  // Skeleton for greeting/header
+  const GreetingSkeleton = () => (
+    <View style={styles.topContainer}>
+      <View style={styles.row}>
+        <View
+          style={[styles.avatarContainer, { backgroundColor: "#e5e7eb" }]}
+        />
+        <View style={styles.greetingColumn}>
+          <View
+            style={{
+              height: 15,
+              width: 100,
+              backgroundColor: "#e5e7eb",
+              borderRadius: 4,
+              marginBottom: 6,
+            }}
+          />
+          <View
+            style={{
+              height: 17,
+              width: 120,
+              backgroundColor: "#e5e7eb",
+              borderRadius: 4,
+            }}
+          />
+        </View>
+      </View>
+      <View
+        style={[
+          styles.cartButton,
+          { backgroundColor: "#e5e7eb", width: 40, height: 40 },
+        ]}
+      />
+    </View>
+  );
+
+  const [products, setProducts] = useState<any[]>([]);
+  const [shuffledProducts, setShuffledProducts] = useState<any[]>([]);
+  const [lastShuffle, setLastShuffle] = useState<number>(Date.now());
+  const [productsLoading, setProductsLoading] = useState(true);
+
   const filterOptions = [
     "All",
     "Men",
@@ -100,6 +142,16 @@ export default function HomeTabScreen() {
   ];
 
   const onSearch = (text: string) => setSearchQuery(text);
+
+  // Shuffle helper
+  const shuffleArray = (array: any[]) => {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -142,6 +194,31 @@ export default function HomeTabScreen() {
   }, [dispatch]);
 
   useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const productsSnapshot = await getDocs(collection(db, "products"));
+        const productsData = productsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setProducts(productsData);
+        // Shuffle on fetch
+        const shuffled = shuffleArray(productsData);
+        setShuffledProducts(shuffled);
+        setLastShuffle(Date.now());
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+        setToastMessage("Failed to load products. Try again later.");
+        setToastVisible(true);
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  useEffect(() => {
     const updateCountdown = () => {
       const now = new Date();
       const tomorrow = new Date();
@@ -164,15 +241,65 @@ export default function HomeTabScreen() {
     return () => clearInterval(interval);
   }, []);
 
+  // Reshuffle after countdown (every 24 hours)
+  useEffect(() => {
+    if (!products.length) return;
+    // Calculate ms until midnight
+    const now = new Date();
+    const tomorrow = new Date();
+    tomorrow.setHours(24, 0, 0, 0);
+    const msUntilMidnight = tomorrow.getTime() - now.getTime();
+
+    const timer = setTimeout(() => {
+      const shuffled = shuffleArray(products);
+      setShuffledProducts(shuffled);
+      setLastShuffle(Date.now());
+    }, msUntilMidnight);
+
+    return () => clearTimeout(timer);
+  }, [products, lastShuffle]);
+
   const lastSeen = userProfile?.lastSeen
     ? new Date(userProfile.lastSeen).toLocaleString()
     : "Just now";
 
+  // Flash sale: first 6 products, rest: others
+  const flashSaleProducts = shuffledProducts.slice(0, 6);
+  const otherProducts = shuffledProducts.slice(6);
+
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF6347" />
-      </View>
+      <SafeAreaView style={styles.screen}>
+        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+          <GreetingSkeleton />
+          {/* Search bar skeleton */}
+          <View style={styles.searchFilterRow}>
+            <View style={[styles.searchBar, { backgroundColor: "#e5e7eb" }]} />
+            <View
+              style={[
+                styles.filterButtonStandalone,
+                { backgroundColor: "#e5e7eb", width: 44, height: 44 },
+              ]}
+            />
+          </View>
+          {/* Promo banner skeleton */}
+          <View
+            style={[
+              styles.promoBannerContainer,
+              { backgroundColor: "#e5e7eb", minHeight: 140 },
+            ]}
+          />
+          {/* Product skeletons */}
+          <View style={styles.productsSection}>
+            {[0, 1, 2].map((rowIdx) => (
+              <View style={styles.productsRow} key={rowIdx}>
+                <ProductSkeleton />
+                <ProductSkeleton />
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
     );
   }
 
@@ -322,7 +449,85 @@ export default function HomeTabScreen() {
             </View>
           </View>
 
-          {/* Products Section */}
+          {/* All Products Section */}
+          {!productsLoading && otherProducts.length > 0 && (
+            <View style={styles.productsSection}>
+              <View style={styles.productsHeaderRow}>
+                <Text style={styles.productsTitle}>All Products</Text>
+              </View>
+              <View style={{ paddingBottom: 20 }}>
+                {chunkArray(otherProducts, 2).map((row, rowIndex) => (
+                  <View style={styles.productsRow} key={rowIndex}>
+                    {row.map((product) => (
+                      <TouchableOpacity
+                        key={product.id}
+                        style={styles.productCardGrid}
+                        activeOpacity={0.85}
+                        onPress={() => router.push(`/product/${product.id}`)}
+                      >
+                        <Image
+                          source={{ uri: product.images?.[0] }}
+                          style={styles.productImage}
+                          resizeMode="cover"
+                        />
+                        <View style={{ paddingHorizontal: 5 }}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              justifyContent: "space-between",
+                              flex: 1,
+                              marginBottom: 5,
+                            }}
+                          >
+                            <Text style={styles.productName} numberOfLines={1}>
+                              {product.name}
+                            </Text>
+                            <View style={{ display: "none" }}>
+                              <AntDesign
+                                name="star"
+                                size={14}
+                                color={isDarkMode ? "#FFD700" : "#FFB300"}
+                                style={{ marginRight: 2 }}
+                              />
+                              <Text
+                                style={{
+                                  color: isDarkMode ? "#FFD700" : "#FFB300",
+                                  fontSize: 14,
+                                  fontFamily: "BeVietnamPro-Regular",
+                                }}
+                              >
+                                {product.rating}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={styles.productPriceRow}>
+                            <Text style={styles.productPrice}>
+                              ₦
+                              {Number(product.price).toLocaleString("en-NG", {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0,
+                              })}
+                            </Text>
+                            <Text style={styles.productOldPrice}>
+                              ₦
+                              {(
+                                product.price -
+                                product.price * 0.08297
+                              ).toFixed(2)}
+                            </Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                    {/* Fill empty space if row has only one item */}
+                    {row.length < 2 && <View style={styles.productCardGrid} />}
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Flash sales Section */}
           <View style={styles.productsSection}>
             <View style={styles.productsHeaderRow}>
               <Text style={styles.productsTitle}>Flash Sale</Text>
@@ -332,60 +537,85 @@ export default function HomeTabScreen() {
               </View>
             </View>
             <View style={{ paddingBottom: 80 }}>
-              {chunkArray(products, 2).map((row, rowIndex) => (
-                <View style={styles.productsRow} key={rowIndex}>
-                  {row.map((product) => (
-                    <View key={product.id} style={styles.productCardGrid}>
-                      <Image
-                        source={product.image}
-                        style={styles.productImage}
-                        resizeMode="cover"
-                      />
-                      <View style={{ paddingHorizontal: 5 }}>
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            justifyContent: "space-between",
-                            flex: 1,
-                            marginBottom: 5,
-                          }}
-                        >
-                          <Text style={styles.productName} numberOfLines={1}>
-                            {product.name}
-                          </Text>
-                          <View style={styles.productStarsRow}>
-                            <AntDesign
-                              name="star"
-                              size={14}
-                              color={isDarkMode ? "#FFD700" : "#FFB300"}
-                              style={{ marginRight: 2 }}
-                            />
-                            <Text
-                              style={{
-                                color: isDarkMode ? "#FFD700" : "#FFB300",
-                                fontSize: 14,
-                                fontFamily: "BeVietnamPro-Regular",
-                              }}
-                            >
-                              {product.rating}
+              {productsLoading ? (
+                // Skeleton loader grid (2 per row, 2 rows)
+                <>
+                  {[0, 1, 2].map((rowIdx) => (
+                    <View style={styles.productsRow} key={rowIdx}>
+                      <ProductSkeleton />
+                      <ProductSkeleton />
+                    </View>
+                  ))}
+                </>
+              ) : (
+                chunkArray(flashSaleProducts, 2).map((row, rowIndex) => (
+                  <View style={styles.productsRow} key={rowIndex}>
+                    {row.map((product) => (
+                      <TouchableOpacity
+                        key={product.id}
+                        style={styles.productCardGrid}
+                        activeOpacity={0.85}
+                        onPress={() => router.push(`/product/${product.id}`)}
+                      >
+                        <Image
+                          source={{ uri: product.images?.[0] }}
+                          style={styles.productImage}
+                          resizeMode="cover"
+                        />
+                        <View style={{ paddingHorizontal: 5 }}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              justifyContent: "space-between",
+                              flex: 1,
+                              marginBottom: 5,
+                            }}
+                          >
+                            <Text style={styles.productName} numberOfLines={1}>
+                              {product.name}
+                            </Text>
+                            <View style={{ display: "none" }}>
+                              <AntDesign
+                                name="star"
+                                size={14}
+                                color={isDarkMode ? "#FFD700" : "#FFB300"}
+                                style={{ marginRight: 2 }}
+                              />
+                              <Text
+                                style={{
+                                  color: isDarkMode ? "#FFD700" : "#FFB300",
+                                  fontSize: 14,
+                                  fontFamily: "BeVietnamPro-Regular",
+                                }}
+                              >
+                                {product.rating}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={styles.productPriceRow}>
+                            <Text style={styles.productPrice}>
+                              ₦
+                              {Number(product.price).toLocaleString("en-NG", {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0,
+                              })}
+                            </Text>
+                            <Text style={styles.productOldPrice}>
+                              ₦
+                              {(
+                                product.price -
+                                product.price * 0.08297
+                              ).toFixed(2)}
                             </Text>
                           </View>
                         </View>
-                        <View style={styles.productPriceRow}>
-                          <Text style={styles.productPrice}>
-                            ₦{product.price.toFixed(2)}
-                          </Text>
-                          <Text style={styles.productOldPrice}>
-                            ₦{product.oldPrice.toFixed(2)}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  ))}
-                  {/* Fill empty space if row has only one item */}
-                  {row.length < 2 && <View style={styles.productCardGrid} />}
-                </View>
-              ))}
+                      </TouchableOpacity>
+                    ))}
+                    {/* Fill empty space if row has only one item */}
+                    {row.length < 2 && <View style={styles.productCardGrid} />}
+                  </View>
+                ))
+              )}
             </View>
           </View>
         </ScrollView>
@@ -672,8 +902,7 @@ const getStyles = (isDarkMode: boolean) =>
       fontFamily: "BeVietnamPro-Medium",
     },
     productsSection: {
-      marginTop: 8,
-      marginBottom: 24,
+      marginTop: 10,
     },
     productsHeaderRow: {
       flexDirection: "row",
@@ -721,6 +950,8 @@ const getStyles = (isDarkMode: boolean) =>
       height: 160,
       borderRadius: 12,
       marginBottom: 14,
+      borderWidth: 1,
+      borderColor: "#DCDCDC40",
     },
     productName: {
       fontSize: 15,
