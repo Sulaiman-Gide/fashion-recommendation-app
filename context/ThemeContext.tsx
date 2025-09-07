@@ -12,7 +12,7 @@ type ThemeContextType = {
 
 const ThemeContext = createContext<ThemeContextType>({
   theme: "light",
-  isDarkMode: false,
+  isDarkMode: true,
   toggleTheme: () => {},
 });
 
@@ -45,20 +45,20 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     await SecureStore.setItemAsync("theme", newTheme);
   };
 
-  // Optionally, listen for system theme changes ONLY if user hasn't set a preference
-  // (Uncomment if you want this feature)
-  /*
   useEffect(() => {
     const listen = Appearance.addChangeListener(({ colorScheme }) => {
       SecureStore.getItemAsync("theme").then((stored) => {
-        if (stored !== "dark" && stored !== "light" && (colorScheme === "dark" || colorScheme === "light")) {
+        if (
+          stored !== "dark" &&
+          stored !== "light" &&
+          (colorScheme === "dark" || colorScheme === "light")
+        ) {
           setTheme(colorScheme);
         }
       });
     });
     return () => listen.remove();
   }, []);
-  */
 
   if (!isLoaded) {
     // Optionally, render nothing or a splash while loading theme
