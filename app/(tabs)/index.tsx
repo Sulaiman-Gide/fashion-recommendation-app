@@ -46,85 +46,164 @@ export default function HomeTabScreen() {
   const styles = getStyles(isDarkMode);
 
   // Skeleton loader for product cards
-  const ProductSkeleton = () => (
-    <View style={styles.productCardGrid}>
-      <View style={[styles.productImage, { backgroundColor: "#e5e7eb" }]} />
-      <View style={{ paddingHorizontal: 5 }}>
-        <View
-          style={{
-            height: 16,
-            width: "70%",
-            backgroundColor: "#e5e7eb",
-            borderRadius: 4,
-            marginBottom: 8,
-          }}
-        />
-        <View
-          style={{
-            height: 14,
-            width: "40%",
-            backgroundColor: "#e5e7eb",
-            borderRadius: 4,
-            marginBottom: 6,
-          }}
-        />
-        <View style={{ flexDirection: "row", gap: 6 }}>
-          <View
-            style={{
-              height: 14,
-              width: 40,
-              backgroundColor: "#e5e7eb",
-              borderRadius: 4,
-            }}
-          />
-          <View
-            style={{
-              height: 14,
-              width: 30,
-              backgroundColor: "#e5e7eb",
-              borderRadius: 4,
-            }}
-          />
-        </View>
-      </View>
-    </View>
-  );
+  const ProductSkeleton = () => {
+    const { isDarkMode } = useTheme();
+    const styles = getStyles(isDarkMode);
+    const skeletonBg = isDarkMode ? "#2a2a2a" : "#e5e7eb";
+    const skeletonHighlight = isDarkMode ? "#333" : "#f3f4f6";
 
-  // Skeleton for greeting/header
-  const GreetingSkeleton = () => (
-    <View style={styles.topContainer}>
-      <View style={styles.row}>
-        <View
-          style={[styles.avatarContainer, { backgroundColor: "#e5e7eb" }]}
-        />
-        <View style={styles.greetingColumn}>
-          <View
-            style={{
-              height: 15,
-              width: 100,
-              backgroundColor: "#e5e7eb",
-              borderRadius: 4,
-              marginBottom: 6,
-            }}
-          />
-          <View
-            style={{
-              height: 17,
-              width: 120,
-              backgroundColor: "#e5e7eb",
-              borderRadius: 4,
-            }}
-          />
-        </View>
-      </View>
+    type SkeletonBoxProps = {
+      width?: number | string;
+      height?: number;
+      style?: any;
+    };
+
+    const SkeletonBox = ({
+      width = "100%",
+      height = 16,
+      style = {},
+    }: SkeletonBoxProps) => (
       <View
         style={[
-          styles.cartButton,
-          { backgroundColor: "#e5e7eb", width: 40, height: 40 },
+          {
+            backgroundColor: skeletonBg,
+            borderRadius: 4,
+            overflow: "hidden",
+            position: "relative",
+            width,
+            height,
+          },
+          style,
         ]}
-      />
-    </View>
-  );
+      >
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: skeletonHighlight,
+            opacity: 0.5,
+          }}
+        />
+      </View>
+    );
+
+    return (
+      <View style={styles.productCardGrid}>
+        <View
+          style={[
+            styles.productImage,
+            {
+              backgroundColor: skeletonBg,
+              overflow: "hidden",
+              position: "relative",
+            },
+          ]}
+        >
+          <View
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: skeletonHighlight,
+              opacity: 0.5,
+            }}
+          />
+        </View>
+        <View style={{ paddingHorizontal: 5 }}>
+          <SkeletonBox width={"70%"} height={16} style={{ marginBottom: 8 }} />
+          <SkeletonBox width={"40%"} height={14} style={{ marginBottom: 6 }} />
+          <View style={{ flexDirection: "row", gap: 6, marginTop: 8 }}>
+            <SkeletonBox width={40} height={14} />
+            <SkeletonBox width={30} height={14} />
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  // Skeleton for greeting/header
+  const GreetingSkeleton = () => {
+    const { isDarkMode } = useTheme();
+    const styles = getStyles(isDarkMode);
+    const skeletonBg = isDarkMode ? "#2a2a2a" : "#e5e7eb";
+    const skeletonHighlight = isDarkMode ? "#333" : "#f3f4f6";
+
+    type SkeletonBoxProps = {
+      width?: number | string;
+      height?: number;
+      style?: any;
+    };
+
+    const SkeletonBox = ({
+      width = "100%",
+      height = 16,
+      style = {},
+    }: SkeletonBoxProps) => (
+      <View
+        style={[
+          {
+            backgroundColor: skeletonBg,
+            borderRadius: 4,
+            overflow: "hidden",
+            position: "relative",
+            width,
+            height,
+          },
+          style,
+        ]}
+      >
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: skeletonHighlight,
+            opacity: 0.5,
+          }}
+        />
+      </View>
+    );
+
+    return (
+      <View style={styles.topContainer}>
+        <View style={styles.row}>
+          <View
+            style={[
+              styles.avatarContainer,
+              {
+                backgroundColor: skeletonBg,
+                overflow: "hidden",
+                position: "relative",
+              },
+            ]}
+          >
+            <View
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: skeletonHighlight,
+                opacity: 0.5,
+              }}
+            />
+          </View>
+          <View style={styles.greetingColumn}>
+            <SkeletonBox width={100} height={15} style={{ marginBottom: 6 }} />
+            <SkeletonBox width={120} height={17} />
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   const [products, setProducts] = useState<any[]>([]);
   const [shuffledProducts, setShuffledProducts] = useState<any[]>([]);
@@ -268,33 +347,146 @@ export default function HomeTabScreen() {
   const otherProducts = shuffledProducts.slice(6);
 
   if (loading) {
+    const skeletonBg = isDarkMode ? "#2a2a2a" : "#e5e7eb";
+    const skeletonHighlight = isDarkMode ? "#333" : "#f3f4f6";
+
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView
+        style={[
+          styles.screen,
+          { backgroundColor: isDarkMode ? "#000" : "#f9fafb" },
+        ]}
+      >
+        <StatusBar
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+          backgroundColor={isDarkMode ? "#000" : "#fff"}
+        />
         <ScrollView contentContainerStyle={styles.scrollViewContent}>
           <GreetingSkeleton />
+
           {/* Search bar skeleton */}
           <View style={styles.searchFilterRow}>
-            <View style={[styles.searchBar, { backgroundColor: "#e5e7eb" }]} />
+            <View
+              style={[
+                styles.searchBar,
+                {
+                  backgroundColor: skeletonBg,
+                  overflow: "hidden",
+                  position: "relative",
+                },
+              ]}
+            >
+              <View
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: skeletonHighlight,
+                  opacity: 0.5,
+                }}
+              />
+            </View>
             <View
               style={[
                 styles.filterButtonStandalone,
-                { backgroundColor: "#e5e7eb", width: 44, height: 44 },
+                {
+                  backgroundColor: skeletonBg,
+                  width: 44,
+                  height: 44,
+                  overflow: "hidden",
+                  position: "relative",
+                },
               ]}
-            />
+            >
+              <View
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: skeletonHighlight,
+                  opacity: 0.5,
+                }}
+              />
+            </View>
           </View>
+
           {/* Promo banner skeleton */}
           <View
             style={[
               styles.promoBannerContainer,
-              { backgroundColor: "#e5e7eb", minHeight: 140 },
+              {
+                backgroundColor: skeletonBg,
+                minHeight: 140,
+                overflow: "hidden",
+                position: "relative",
+              },
             ]}
-          />
+          >
+            <View
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: skeletonHighlight,
+                opacity: 0.5,
+              }}
+            />
+          </View>
+
           {/* Product skeletons */}
           <View style={styles.productsSection}>
             {[0, 1, 2].map((rowIdx) => (
               <View style={styles.productsRow} key={rowIdx}>
-                <ProductSkeleton />
-                <ProductSkeleton />
+                <View
+                  style={{
+                    width: 215,
+                    height: 190,
+                    backgroundColor: skeletonBg,
+                    borderRadius: 12,
+                    overflow: "hidden",
+                    position: "relative",
+                  }}
+                >
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: skeletonHighlight,
+                      opacity: 0.5,
+                    }}
+                  />
+                </View>
+                <View
+                  style={{
+                    width: 215,
+                    height: 190,
+                    backgroundColor: skeletonBg,
+                    borderRadius: 12,
+                    overflow: "hidden",
+                    position: "relative",
+                  }}
+                >
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: skeletonHighlight,
+                      opacity: 0.5,
+                    }}
+                  />
+                </View>
               </View>
             ))}
           </View>
@@ -627,8 +819,10 @@ export default function HomeTabScreen() {
 const getStyles = (isDarkMode: boolean) =>
   StyleSheet.create({
     screen: {
-      flex: 0.98,
+      flex: 1,
       backgroundColor: isDarkMode ? "#000" : "#f9fafb",
+      paddingTop: 10,
+      paddingBottom: 110,
     },
     loadingContainer: {
       flex: 1,
@@ -947,7 +1141,7 @@ const getStyles = (isDarkMode: boolean) =>
     },
     productImage: {
       width: "100%",
-      height: 160,
+      height: 220,
       borderRadius: 12,
       marginBottom: 14,
       borderWidth: 1,

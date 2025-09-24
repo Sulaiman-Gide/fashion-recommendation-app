@@ -4,11 +4,14 @@ import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef } from "react";
 import { Animated, Dimensions, Platform, StyleSheet, Text } from "react-native";
 
+export type ToastType = "error" | "success";
+
 interface CustomToastProps {
   message: string;
-  type: "error" | "success";
+  type: ToastType;
   visible: boolean;
-  onHide: () => void;
+  onHide?: () => void;
+  onDismiss?: () => void;
 }
 
 const { width } = Dimensions.get("window");
@@ -17,37 +20,52 @@ const CustomToast: React.FC<CustomToastProps> = ({
   message,
   type,
   visible,
-  onHide,
+  onHide = () => {},
+  onDismiss = () => {},
 }) => {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-50)).current;
 
   useEffect(() => {
-    if (visible) {
+    if (!visible) {
+      onDismiss();
+      return;
+    }
+
+    // Show animation
+    Animated.parallel([
+      Animated.spring(opacity, {
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+      Animated.spring(translateY, {
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Auto-hide after 3 seconds
+    const timer = setTimeout(() => {
+      hideToast();
+    }, 3000);
+
+    return () => clearTimeout(timer);
+
+    function hideToast() {
       Animated.parallel([
-        Animated.spring(opacity, {
-          toValue: 1,
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 300,
           useNativeDriver: true,
         }),
-        Animated.spring(translateY, {
-          toValue: 0,
+        Animated.timing(translateY, {
+          toValue: -50,
+          duration: 300,
           useNativeDriver: true,
         }),
       ]).start(() => {
-        setTimeout(() => {
-          Animated.parallel([
-            Animated.timing(opacity, {
-              toValue: 0,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-            Animated.timing(translateY, {
-              toValue: -50,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-          ]).start(onHide);
-        }, 3000);
+        onHide();
+        onDismiss();
       });
     }
   }, [visible]);
