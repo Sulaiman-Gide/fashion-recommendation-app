@@ -1,11 +1,12 @@
 import CustomToast, { ToastType } from "@/components/CustomToast";
+import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 import { addToCart } from "@/store/cartSlice";
 import { RootState } from "@/store/store";
+import { Product } from "@/types";
 import { AntDesign, Feather, MaterialIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Animated,
@@ -33,13 +34,20 @@ export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const dispatch = useDispatch();
-  const [product, setProduct] = useState<any>(null);
+  const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageIndex, setImageIndex] = useState(0);
   const [liked, setLiked] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  // Default values for optional product properties
+  const safeProduct = {
+    ...product,
+    stock: product?.stock ?? 0,
+    sizes: product?.sizes ?? [],
+    colors: product?.colors ?? [],
+  };
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<ToastType>("success");
@@ -47,21 +55,48 @@ export default function ProductDetailScreen() {
   const insets = useSafeAreaInsets();
   const cartItems = useSelector((state: RootState) => state.cart.items);
   const { isDarkMode, toggleTheme } = useTheme();
+  const { user } = useAuth();
 
   useEffect(() => {
-    const fetchProduct = async () => {
-      try {
-        const docRef = doc(db, "products", id as string);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setProduct(docSnap.data());
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchProduct();
   }, [id]);
+
+  const fetchProduct = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      setProduct(data);
+
+      // Track product view for recommendations
+      if (user?.uid) {
+        await supabase
+          .from("user_activity")
+          .upsert(
+            {
+              user_id: user.uid,
+              product_id: id,
+              last_viewed: new Date().toISOString(),
+              view_count: 1,
+            },
+            {
+              onConflict: "user_id,product_id",
+              count: "exact",
+            }
+          )
+          .select();
+      }
+    } catch (error) {
+      console.error("Error fetching product:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const showToast = (message: string, type: ToastType = "success") => {
     setToastMessage(message);
@@ -319,106 +354,105 @@ export default function ProductDetailScreen() {
   }
 
   return (
-    <SafeAreaView
+    <View
       style={{ flex: 1, backgroundColor: isDarkMode ? "#333333" : "#ffffff" }}
-      edges={["bottom"]}
     >
       <StatusBar
         barStyle="light-content"
         translucent
         backgroundColor="transparent"
       />
-      <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-        {/* Image Carousel */}
-        <View style={styles.carouselContainer}>
-          <FlatList
-            data={product.images}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={(e) => {
-              const idx = Math.round(e.nativeEvent.contentOffset.x / width);
-              setImageIndex(idx);
-            }}
-            renderItem={({ item }) => (
-              <Image
-                source={{ uri: item }}
-                style={styles.carouselImage}
-                resizeMode="cover"
-              />
-            )}
-            keyExtractor={(_, idx) => idx.toString()}
-          />
-          {/* Carousel indicators */}
-          <View style={styles.carouselIndicators}>
-            {product.images.map((_: any, idx: number) => (
-              <View
-                key={idx}
-                style={[
-                  styles.carouselDot,
-                  imageIndex === idx && styles.carouselDotActive,
-                ]}
-              />
-            ))}
-          </View>
-          {/* Back button */}
-          <TouchableOpacity
-            style={[
-              styles.backButton,
-              {
-                top:
-                  (Platform.OS === "android"
-                    ? StatusBar.currentHeight || 0
-                    : insets.top) + 8,
-              },
-            ]}
-            onPress={() => router.back()}
-          >
-            <Feather name="arrow-left" size={20} color="#222" />
-          </TouchableOpacity>
-          {/* Like button */}
-          <Animated.View
-            style={[
-              styles.likeButton,
-              {
-                top:
-                  (Platform.OS === "android"
-                    ? StatusBar.currentHeight || 0
-                    : insets.top) + 8,
-                transform: [{ scale: likeScale }],
-              },
-            ]}
-          >
-            <Pressable onPress={handleLike} hitSlop={10}>
-              <AntDesign
-                name={liked ? "heart" : "hearto"}
-                size={22}
-                color={liked ? "#FF6347" : "#fff"}
-              />
-            </Pressable>
-          </Animated.View>
+
+      {/* Main ScrollView */}
+
+      {/* Image Carousel */}
+      <View style={styles.carouselContainer}>
+        <FlatList
+          data={product.images}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={(e) => {
+            const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+            setImageIndex(idx);
+          }}
+          renderItem={({ item }) => (
+            <Image
+              source={{ uri: item }}
+              style={styles.carouselImage}
+              resizeMode="cover"
+            />
+          )}
+          keyExtractor={(_, idx) => idx.toString()}
+        />
+
+        {/* Carousel indicators */}
+        <View style={styles.carouselIndicators}>
+          {product.images.map((_: any, idx: number) => (
+            <View
+              key={idx}
+              style={[
+                styles.carouselDot,
+                imageIndex === idx && styles.carouselDotActive,
+              ]}
+            />
+          ))}
         </View>
 
+        {/* Back button */}
+        <TouchableOpacity
+          style={[
+            styles.backButton,
+            {
+              top:
+                (Platform.OS === "android"
+                  ? StatusBar.currentHeight || 0
+                  : insets.top) + 8,
+            },
+          ]}
+          onPress={() => router.back()}
+        >
+          <Feather name="arrow-left" size={20} color="#222" />
+        </TouchableOpacity>
+
+        {/* Like button */}
+        <Animated.View
+          style={[
+            styles.likeButton,
+            {
+              top:
+                (Platform.OS === "android"
+                  ? StatusBar.currentHeight || 0
+                  : insets.top) + 8,
+              transform: [{ scale: likeScale }],
+            },
+          ]}
+        >
+          <Pressable onPress={handleLike} hitSlop={10}>
+            <AntDesign
+              name={liked ? "heart" : "hearto"}
+              size={22}
+              color={liked ? "#FF6347" : "#fff"}
+            />
+          </Pressable>
+        </Animated.View>
+      </View>
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 80, paddingTop: 40 }}
+      >
         {/* Product Info */}
         <View
           style={[
             styles.infoContainer,
-            {
-              backgroundColor: isDarkMode ? "#333" : "#dcdcdc40",
-              padding: 16,
-            },
+            { backgroundColor: isDarkMode ? "#333" : "#f8f8f8" },
           ]}
         >
           {/* Brand and Name Row */}
           <View style={styles.brandRow}>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={styles.brandHeader}>
+              <View style={styles.brandContainer}>
                 <Text style={styles.productBrand}>{product.brand}</Text>
                 <MaterialIcons name="verified" size={16} color="#16a34a" />
               </View>
@@ -428,22 +462,26 @@ export default function ProductDetailScreen() {
                 style={[
                   styles.stockText,
                   {
-                    color: product.stock > 0 ? "#16a34a" : "#FF6347",
-                    borderColor: product.stock > 0 ? "#16a34a" : "#FF6347",
+                    color: (product.stock ?? 0) > 0 ? "#16a34a" : "#FF6347",
+                    borderColor:
+                      (product.stock ?? 0) > 0 ? "#16a34a" : "#FF6347",
                     borderWidth: 1,
-                    paddingVertical: 7,
-                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    paddingHorizontal: 12,
                     borderRadius: 32,
                   },
                 ]}
               >
-                {product.stock > 0
+                {(product.stock ?? 0) > 0
                   ? `In stock: ${product.stock}`
                   : "Out of stock"}
               </Text>
             </View>
-            <Text style={styles.productName}>{product.name}</Text>
+            <Text style={styles.productName} numberOfLines={2}>
+              {product.name}
+            </Text>
           </View>
+
           {/* Price Section */}
           <View style={styles.priceRow}>
             <Text style={styles.productPrice}>
@@ -454,15 +492,23 @@ export default function ProductDetailScreen() {
               })}
             </Text>
             <Text style={styles.productOldPrice}>
-              ₦{(product.price - product.price * 0.08297).toFixed(2)}
+              ₦
+              {(product.price - product.price * 0.08297).toLocaleString(
+                "en-NG",
+                {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }
+              )}
             </Text>
           </View>
+
           {/* Size Selection */}
-          {product.sizes?.length > 0 && (
-            <View style={{ marginBottom: 16 }}>
+          {(product.sizes?.length ?? 0) > 0 && (
+            <View style={styles.sectionContainer}>
               <Text style={styles.sectionTitle}>Select Size</Text>
               <View style={styles.optionContainer}>
-                {product.sizes.map((size: string) => (
+                {(product.sizes ?? []).map((size: string) => (
                   <TouchableOpacity
                     key={size}
                     style={[
@@ -486,16 +532,20 @@ export default function ProductDetailScreen() {
           )}
 
           {/* Color Selection */}
-          {product.colors?.length > 0 && (
-            <View style={{ marginBottom: 16 }}>
+          {(product.colors?.length ?? 0) > 0 && (
+            <View style={styles.sectionContainer}>
               <Text style={styles.sectionTitle}>Select Color</Text>
               <View style={styles.optionContainer}>
-                {product.colors.map((color: string) => (
+                {(product.colors ?? []).map((color: string) => (
                   <TouchableOpacity
                     key={color}
                     style={[
                       styles.colorOption,
-                      { backgroundColor: color },
+                      {
+                        backgroundColor: color,
+                        borderWidth: 2,
+                        borderColor: "#e5e7eb80",
+                      },
                       selectedColor === color && styles.colorOptionSelected,
                     ]}
                     onPress={() => setSelectedColor(color)}
@@ -506,7 +556,7 @@ export default function ProductDetailScreen() {
           )}
 
           {/* Quantity Selector */}
-          <View style={{ marginBottom: 24 }}>
+          <View style={[styles.sectionContainer, { marginBottom: 16 }]}>
             <Text style={styles.sectionTitle}>Quantity</Text>
             <View style={styles.quantityContainer}>
               <TouchableOpacity
@@ -520,6 +570,9 @@ export default function ProductDetailScreen() {
               <TouchableOpacity
                 style={styles.quantityButton}
                 onPress={() => setQuantity((prev) => prev + 1)}
+                disabled={
+                  (product.stock ?? 0) > 0 && quantity >= (product.stock ?? 1)
+                }
               >
                 <Text style={styles.quantityButtonText}>+</Text>
               </TouchableOpacity>
@@ -527,43 +580,53 @@ export default function ProductDetailScreen() {
           </View>
 
           {/* Description */}
-
-          <Text style={styles.sectionTitle}>Description</Text>
-          <Text style={styles.productDescription}>{product.description}</Text>
-          {/* Action Buttons */}
-          <View style={styles.actionRow}>
-            <TouchableOpacity
-              style={styles.addToCartButton}
-              activeOpacity={0.85}
-              onPress={handleAddToCart}
-              disabled={product.stock <= 0}
-            >
-              <Text style={styles.addToCartText}>
-                {product.stock <= 0 ? "Out of Stock" : "Add to Cart"}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.buyNowButton,
-                product.stock <= 0 && styles.buttonDisabled,
-              ]}
-              activeOpacity={0.85}
-              onPress={handleBuyNow}
-              disabled={product.stock <= 0}
-            >
-              <Text style={styles.buyNowText}>Buy Now</Text>
-            </TouchableOpacity>
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Description</Text>
+            <Text style={styles.productDescription}>{product.description}</Text>
           </View>
-
-          <CustomToast
-            message={toastMessage}
-            type={toastType}
-            visible={toastVisible}
-            onDismiss={() => setToastVisible(false)}
-          />
         </View>
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Fixed Action Buttons */}
+      <View
+        style={[
+          styles.actionRow,
+          {
+            backgroundColor: isDarkMode ? "#333" : "#f9f9f9",
+            borderTopColor: isDarkMode ? "#444" : "#e5e7eb",
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.addToCartButton}
+          activeOpacity={0.85}
+          onPress={handleAddToCart}
+          disabled={(product.stock ?? 0) <= 0}
+        >
+          <Text style={styles.addToCartText}>
+            {(product.stock ?? 0) <= 0 ? "Out of Stock" : "Add to Cart"}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.buyNowButton,
+            (product.stock ?? 0) <= 0 && styles.buttonDisabled,
+          ]}
+          activeOpacity={0.85}
+          onPress={handleBuyNow}
+          disabled={(product.stock ?? 0) <= 0}
+        >
+          <Text style={styles.buyNowText}>Buy Now</Text>
+        </TouchableOpacity>
+      </View>
+
+      <CustomToast
+        message={toastMessage}
+        type={toastType}
+        visible={toastVisible}
+        onDismiss={() => setToastVisible(false)}
+      />
+    </View>
   );
 }
 
@@ -648,11 +711,11 @@ const getStyles = (isDarkMode: boolean) =>
     },
     carouselImage: {
       width: width,
-      height: 550,
+      height: 570,
     },
     carouselIndicators: {
       position: "absolute",
-      bottom: 32,
+      bottom: 10,
       left: 0,
       right: 0,
       flexDirection: "row",
@@ -699,18 +762,31 @@ const getStyles = (isDarkMode: boolean) =>
       alignItems: "center",
     },
     infoContainer: {
-      position: "relative",
-      marginTop: -25,
+      backgroundColor: "#fff",
       borderTopLeftRadius: 26,
       borderTopRightRadius: 26,
-      minHeight: 320,
-      height: height * 0.45,
+      padding: 16,
+      marginTop: -25,
       zIndex: 10,
-      overflow: "hidden",
+      minHeight: height * 0.4,
     },
     brandRow: {
       gap: 15,
-      marginVertical: 6,
+      marginBottom: 16,
+    },
+    brandHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    brandContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    sectionContainer: {
+      marginBottom: 20,
     },
     productBrand: {
       fontSize: 16,
@@ -750,6 +826,8 @@ const getStyles = (isDarkMode: boolean) =>
       fontSize: 15,
       color: isDarkMode ? "#d1d5db" : "#444",
       fontFamily: "BeVietnamPro-Regular",
+      lineHeight: 22,
+      marginTop: 4,
     },
 
     stockText: {
@@ -784,13 +862,18 @@ const getStyles = (isDarkMode: boolean) =>
       flexDirection: "row",
       gap: 12,
       position: "absolute",
-      bottom: 20,
-      left: 20,
-      right: 20,
-      paddingBottom: 0,
-      paddingTop: 15,
-      borderTopColor: "#e5e7eb",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      padding: 16,
+      backgroundColor: "#fff",
       borderTopWidth: 1,
+      borderTopColor: "#e5e7eb",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 5,
     },
     addToCartButton: {
       flexDirection: "row",

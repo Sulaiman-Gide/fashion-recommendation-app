@@ -4,13 +4,14 @@ import PersonAvatar from "@/assets/images/personAvatar.svg";
 import CustomToast from "@/components/CustomToast";
 import { useTheme } from "@/context/ThemeContext";
 import { auth, db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 import { setAuthenticated, setToken } from "@/store/authSlice";
 import { persistor } from "@/store/store";
 import { AntDesign } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { signOut } from "firebase/auth";
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Image,
@@ -29,6 +30,14 @@ const chunkArray = (arr: any[], size: number) =>
   Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
     arr.slice(i * size, i * size + size)
   );
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  images: string[];
+  category: string;
+}
 
 export default function HomeTabScreen() {
   const router = useRouter();
@@ -272,30 +281,32 @@ export default function HomeTabScreen() {
     fetchUserProfile();
   }, [dispatch]);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const productsSnapshot = await getDocs(collection(db, "products"));
-        const productsData = productsSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setProducts(productsData);
-        // Shuffle on fetch
-        const shuffled = shuffleArray(productsData);
-        setShuffledProducts(shuffled);
-        setLastShuffle(Date.now());
-      } catch (error) {
-        console.error("Failed to fetch products:", error);
-        setToastMessage("Failed to load products. Try again later.");
-        setToastVisible(true);
-      } finally {
-        setProductsLoading(false);
-      }
-    };
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false });
 
+      if (error) throw error;
+      setProducts(data || []);
+      setShuffledProducts(data ? shuffleArray(data) : []);
+      // Debug log to help verify fetched products
+      console.log("Fetched products:", data);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+      setProductsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchProducts();
   }, []);
+
+  console.log("Productssssss", products);
 
   useEffect(() => {
     const updateCountdown = () => {

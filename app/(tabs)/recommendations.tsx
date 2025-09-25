@@ -1,61 +1,25 @@
+import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
+import { getRecommendedProducts } from "@/lib/recommendations";
+import { Product } from "@/types";
 import { useRouter } from "expo-router";
-import React from "react";
+import { StatusBar } from "expo-status-bar";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Dimensions,
   Image,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
-// Dummy recommended products for UI
-const recommendedProducts = [
-  {
-    id: "1",
-    name: "Classic White Shirt",
-    price: 12000,
-    images: ["https://images.unsplash.com/photo-1512436991641-6745cdb1723f"],
-    interest: 0,
-  },
-  {
-    id: "2",
-    name: "Denim Jacket",
-    price: 18500,
-    images: ["https://images.unsplash.com/photo-1517841905240-472988babdf9"],
-    interest: 0,
-  },
-  {
-    id: "3",
-    name: "Summer Dress",
-    price: 9500,
-    images: ["https://images.unsplash.com/photo-1503342217505-b0a15ec3261c"],
-    interest: 0,
-  },
-  {
-    id: "4",
-    name: "Leather Boots",
-    price: 22000,
-    images: ["https://images.unsplash.com/photo-1465101046530-73398c7f28ca"],
-    interest: 0,
-  },
-  {
-    id: "5",
-    name: "Kids Hoodie",
-    price: 8000,
-    images: ["https://images.unsplash.com/photo-1519125323398-675f0ddb6308"],
-    interest: 0,
-  },
-  {
-    id: "6",
-    name: "Sport Sneakers",
-    price: 14500,
-    images: ["https://images.unsplash.com/photo-1519864600265-abb23847ef2c"],
-    interest: 0,
-  },
-];
+const { width } = Dimensions.get("window");
+const CARD_GAP = 10;
+const CARD_WIDTH = (width - 18 * 2 - CARD_GAP) / 2;
 
 const chunkArray = (arr: any[], size: number) =>
   Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
@@ -63,69 +27,106 @@ const chunkArray = (arr: any[], size: number) =>
   );
 
 export default function RecommendationsScreen() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const { isDarkMode } = useTheme();
-  const styles = getStyles(isDarkMode);
+  const { user } = useAuth();
   const router = useRouter();
+  const styles = getStyles(isDarkMode);
+
+  useEffect(() => {
+    if (user) {
+      fetchRecommendations();
+    }
+  }, [user]);
+
+  const fetchRecommendations = async () => {
+    try {
+      setLoading(true);
+      const recommended = await getRecommendedProducts(user?.uid || "");
+      setProducts(recommended);
+    } catch (error) {
+      console.error("Error fetching recommendations:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF6347" />
+        <Text style={styles.loadingText}>Loading recommendations...</Text>
+      </View>
+    );
+  }
+
+  const renderProductCard = (product: Product) => (
+    <TouchableOpacity
+      key={product.id}
+      style={styles.productCard}
+      activeOpacity={0.9}
+      onPress={() => router.push(`/product/${product.id}`)}
+    >
+      <View style={styles.imageContainer}>
+        <Image
+          source={{
+            uri: product.images?.[0] || "https://via.placeholder.com/300",
+          }}
+          style={styles.productImage}
+          resizeMode="cover"
+        />
+        {product.matchScore && (
+          <View style={styles.matchBadge}>
+            <Text style={styles.matchText}>{product.matchScore}% match</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.productInfo}>
+        <Text style={styles.productName} numberOfLines={1}>
+          {product.name}
+        </Text>
+        <View style={styles.productPriceRow}>
+          <Text style={styles.productPrice}>
+            ₦{product.price.toLocaleString("en-NG")}
+          </Text>
+          <Text style={styles.productOldPrice}>
+            ₦{(product.price - product.price * 0.08297).toFixed(2)}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: isDarkMode ? "#000" : "#f9fafb" }}
-    >
-      <View style={styles.screen}>
-        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+    <SafeAreaView style={styles.screen}>
+      <StatusBar style={isDarkMode ? "light" : "dark"} />
+      <ScrollView
+        contentContainerStyle={styles.scrollViewContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.headerContainer}>
           <Text style={styles.header}>Recommended For You</Text>
           <Text style={styles.subHeader}>
-            Products picked just for you. Tap to view details.
+            {products.length > 0
+              ? "Products picked just for you. Tap to view details."
+              : "View more products to see personalized recommendations."}
           </Text>
-          <View style={styles.productsSection}>
-            {chunkArray(recommendedProducts, 2).map((row, rowIndex) => (
-              <View style={styles.productsRow} key={rowIndex}>
-                {row.map((product) => (
-                  <TouchableOpacity
-                    key={product.id}
-                    style={styles.productCardGrid}
-                    activeOpacity={0.85}
-                    onPress={() => router.push(`/product/${product.id}`)}
-                  >
-                    <View style={styles.imageContainer}>
-                      <Image
-                        source={{ uri: product.images[0] }}
-                        style={styles.productImage}
-                        resizeMode="cover"
-                      />
-                      <View style={styles.interestBadge}>
-                        <Text style={styles.interestText}>
-                          {product.interest}% match
-                        </Text>
-                      </View>
-                    </View>
-                    <View
-                      style={{
-                        paddingHorizontal: 8,
-                      }}
-                    >
-                      <Text style={styles.productName} numberOfLines={1}>
-                        {product.name}
-                      </Text>
-                      <View style={styles.productPriceRow}>
-                        <Text style={styles.productPrice}>
-                          ₦
-                          {Number(product.price).toLocaleString("en-NG", {
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 0,
-                          })}
-                        </Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-                {/* Fill empty space if row has only one item */}
-                {row.length < 2 && <View style={styles.productCardGrid} />}
-              </View>
-            ))}
+        </View>
+
+        {products.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              No recommendations yet. Start browsing to see personalized
+              suggestions.
+            </Text>
           </View>
-        </ScrollView>
-      </View>
+        ) : (
+          <View style={styles.productsGrid}>
+            {products.map((product) => renderProductCard(product))}
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -135,95 +136,118 @@ const getStyles = (isDarkMode: boolean) =>
     screen: {
       flex: 1,
       backgroundColor: isDarkMode ? "#000" : "#f9fafb",
+      paddingTop: 40,
+      paddingBottom: 100,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#000" : "#f9fafb",
+      padding: 20,
+    },
+    loadingText: {
+      color: isDarkMode ? "#fff" : "#000",
+      marginTop: 12,
+      fontFamily: "BeVietnamPro-Regular",
+      fontSize: 14,
     },
     scrollViewContent: {
-      flexGrow: 1,
       paddingHorizontal: 16,
-      paddingTop: 10,
-      paddingBottom: 80,
+      paddingTop: 16,
+      paddingBottom: 24,
+    },
+    headerContainer: {
+      marginBottom: 20,
     },
     header: {
-      fontSize: 22,
+      fontSize: 24,
       fontFamily: "BeVietnamPro-Bold",
-      color: isDarkMode ? "#fff" : "#222",
+      color: isDarkMode ? "#fff" : "#111",
       marginBottom: 6,
-      letterSpacing: 0.2,
+      letterSpacing: -0.5,
     },
     subHeader: {
       fontSize: 15,
-      color: isDarkMode ? "#aaa" : "#555",
       fontFamily: "BeVietnamPro-Regular",
-      marginBottom: 18,
+      color: isDarkMode ? "#aaa" : "#666",
+      lineHeight: 22,
     },
-    productsSection: {
-      marginTop: 10,
-    },
-    productsRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      marginVertical: 12,
-    },
-    productCardGrid: {
+    emptyContainer: {
       flex: 1,
-      borderRadius: 16,
-      minWidth: 0,
-      maxWidth: "47%",
-      backgroundColor: isDarkMode ? "#18181b" : "#fdfdfdff",
-      marginHorizontal: 2,
-      marginBottom: 4,
-      borderWidth: 2,
-      borderColor: isDarkMode ? "#222" : "#eeeeee65",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 40,
+    },
+    emptyText: {
+      color: isDarkMode ? "#aaa" : "#666",
+      fontFamily: "BeVietnamPro-Regular",
+      fontSize: 15,
+      textAlign: "center",
+      lineHeight: 22,
+    },
+    productsGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+      marginHorizontal: -CARD_GAP / 2,
+    },
+    productCard: {
+      width: CARD_WIDTH,
+      backgroundColor: isDarkMode ? "#18181b" : "#fff",
+      marginBottom: 16,
+      overflow: "hidden",
     },
     imageContainer: {
       position: "relative",
+      aspectRatio: 0.9,
+      backgroundColor: isDarkMode ? "#2a2a2a" : "#f5f5f5",
     },
     productImage: {
       width: "100%",
-      height: 160,
-      borderTopLeftRadius: 16,
-      borderTopRightRadius: 16,
-      borderBottomLeftRadius: 12,
-      borderBottomRightRadius: 12,
-      marginBottom: 10,
-      borderWidth: 1,
-      borderColor: "#DCDCDC40",
+      height: "100%",
     },
-    interestBadge: {
+    matchBadge: {
       position: "absolute",
       top: 10,
       right: 10,
-      backgroundColor: "#FF6347",
-      borderRadius: 16,
+      backgroundColor: "rgba(0,0,0,0.7)",
+      borderRadius: 12,
       paddingHorizontal: 10,
-      paddingVertical: 3,
-      zIndex: 10,
-      shadowColor: "#000",
-      shadowOpacity: 0.08,
-      shadowOffset: { width: 0, height: 2 },
-      shadowRadius: 4,
-      elevation: 2,
+      paddingVertical: 4,
+      alignItems: "center",
+      justifyContent: "center",
     },
-    interestText: {
+    matchText: {
       color: "#fff",
-      fontSize: 13,
+      fontSize: 12,
       fontFamily: "BeVietnamPro-Medium",
       letterSpacing: 0.2,
     },
+    productInfo: {
+      padding: 12,
+    },
     productName: {
-      fontSize: 15,
+      fontSize: 14,
       fontFamily: "BeVietnamPro-Regular",
-      color: isDarkMode ? "#fff" : "#222",
+      color: isDarkMode ? "#f0f0f0" : "#333",
       marginBottom: 4,
+      lineHeight: 18,
     },
     productPriceRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
-      marginBottom: 8,
     },
     productPrice: {
       fontSize: 16,
       fontFamily: "BeVietnamPro-Bold",
       color: "#FF6347",
+    },
+    productOldPrice: {
+      fontSize: 13,
+      fontFamily: "BeVietnamPro-Regular",
+      color: isDarkMode ? "#888" : "#bbb",
+      textDecorationLine: "line-through",
     },
   });

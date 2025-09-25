@@ -8,13 +8,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+// Removed PaystackWebView import
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import CustomToast, { ToastType } from "../../components/CustomToast";
-import { PaymentParams, payWithPaystack } from "../../lib/paystack";
 import {
   CartItem,
   clearCart,
@@ -23,14 +24,191 @@ import {
   updateQuantity,
 } from "../../store/cartSlice";
 
-// CartItem type is imported from cartSlice
-
-export default function CartTabScreen() {
+export default function CartScreen() {
   const { isDarkMode } = useTheme();
+  const getStyles = (isDarkMode: boolean) =>
+    StyleSheet.create({
+      container: {
+        flex: 1,
+        backgroundColor: isDarkMode ? "#000" : "#f9fafb",
+      },
+      loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: isDarkMode ? "#000" : "#f9fafb",
+      },
+      loadingText: {
+        marginTop: 16,
+        fontSize: 16,
+        fontWeight: "500",
+      },
+      header: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: isDarkMode ? "#333" : "#e5e7eb",
+      },
+      headerTitle: {
+        fontSize: 22,
+        fontWeight: "700",
+      },
+      clearButton: {
+        color: "#FF6347",
+        fontSize: 14,
+        fontWeight: "500",
+      },
+      emptyContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 32,
+      },
+      emptyText: {
+        fontSize: 20,
+        fontWeight: "600",
+        marginTop: 16,
+        textAlign: "center",
+      },
+      emptySubtext: {
+        fontSize: 14,
+        marginTop: 8,
+        textAlign: "center",
+        maxWidth: 300,
+      },
+      itemsContainer: {
+        flex: 1,
+        padding: 16,
+      },
+      infoPill: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: 6,
+        marginBottom: 4,
+        minWidth: 30,
+      },
+      itemCard: {
+        flexDirection: "row",
+        padding: 12,
+        marginBottom: 8,
+        borderRadius: 8,
+        alignItems: "center",
+      },
+      itemImage: {
+        width: 80,
+        height: 100,
+        borderRadius: 6,
+        marginRight: 12,
+      },
+      itemDetails: {
+        flex: 1,
+      },
+      itemName: {
+        fontSize: 15,
+        fontWeight: "500",
+        marginBottom: 4,
+      },
+      itemMeta: {
+        fontSize: 13,
+        color: "#666",
+        marginBottom: 2,
+      },
+      itemPrice: {
+        fontSize: 15,
+        fontWeight: "600",
+        marginTop: 4,
+      },
+      quantityContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "#e0e0e0",
+        borderRadius: 20,
+        alignSelf: "flex-start",
+        marginTop: 8,
+      },
+      quantityButton: {
+        padding: 4,
+        alignItems: "center",
+        justifyContent: "center",
+      },
+      quantityText: {
+        minWidth: 24,
+        textAlign: "center",
+        fontSize: 14,
+        fontWeight: "500",
+      },
+      removeButton: {
+        padding: 4,
+        marginLeft: 8,
+      },
+      summaryContainer: {
+        backgroundColor: isDarkMode ? "#1a1a1a" : "#fff",
+        padding: 20,
+        borderTopWidth: 1,
+        borderTopColor: isDarkMode ? "#333" : "#e5e7eb",
+      },
+      summaryRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginBottom: 8,
+      },
+      summaryLabel: {
+        fontSize: 14,
+        color: isDarkMode ? "#fff" : "#000",
+      },
+      summaryValue: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: isDarkMode ? "#fff" : "#000",
+      },
+      divider: {
+        height: 1,
+        backgroundColor: isDarkMode ? "#333" : "#e5e7eb",
+        marginVertical: 12,
+      },
+      totalRow: {
+        marginTop: 4,
+      },
+      totalLabel: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: isDarkMode ? "#fff" : "#000",
+      },
+      totalValue: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#FF6347",
+      },
+      checkoutButton: {
+        backgroundColor: "#FF6347",
+        borderRadius: 8,
+        padding: 16,
+        flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        marginTop: 16,
+      },
+      checkoutButtonText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "600",
+        marginRight: 8,
+      },
+    });
   const styles = getStyles(isDarkMode);
   const dispatch = useDispatch();
   const cartItems = useSelector(selectCartItems);
   const [loading, setLoading] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvv, setCvv] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<ToastType>("success");
@@ -80,46 +258,102 @@ export default function CartTabScreen() {
     ]);
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     if (!cartItems || cartItems.length === 0) {
       showToast("Your cart is empty", "error");
       return;
     }
+    setShowPaymentModal(true);
+  };
+
+  const formatCardNumber = (input: string): string => {
+    const digits = input.replace(/\D/g, "");
+    const formatted = digits.replace(/(\d{4})(?=\d)/g, "$1 ");
+    return formatted.trim();
+  };
+
+  const formatExpiryDate = (input: string): string => {
+    const digits = input.replace(/\D/g, "");
+    if (digits.length >= 3) {
+      return `${digits.slice(0, 2)}/${digits.slice(2, 4)}`;
+    }
+    return digits;
+  };
+
+  const validateExpiryDate = (date: string): boolean => {
+    if (!date || date.length < 5) return false;
+
+    const [monthStr, yearStr] = date.split("/");
+    const month = parseInt(monthStr, 10);
+    const year = 2000 + parseInt(yearStr, 10);
+
+    if (month < 1 || month > 12) return false;
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    if (year < currentYear) return false;
+    if (year === currentYear && month < currentMonth) return false;
+
+    return true;
+  };
+
+  // Update your state handlers
+  const handleCardNumberChange = (text: string) => {
+    const formatted = formatCardNumber(text);
+    setCardNumber(formatted);
+  };
+
+  const handleExpiryChange = (text: string) => {
+    const formatted = formatExpiryDate(text);
+    setExpiry(formatted);
+  };
+
+  const handleCvvChange = (text: string) => {
+    // Only allow digits and limit to 4 characters
+    const digits = text.replace(/\D/g, "").slice(0, 4);
+    setCvv(digits);
+  };
+
+  const validateForm = (): boolean => {
+    // Validate card number (16-19 digits after removing spaces)
+    const cardDigits = cardNumber.replace(/\s/g, "");
+    if (cardDigits.length < 16 || cardDigits.length > 19) {
+      showToast("Please enter a valid 16-19 digit card number", "error");
+      return false;
+    }
+
+    // Validate expiry date
+    if (!validateExpiryDate(expiry)) {
+      showToast("Please enter a valid expiry date (MM/YY)", "error");
+      return false;
+    }
+
+    // Validate CVV (3-4 digits)
+    if (cvv.length < 3 || cvv.length > 4) {
+      showToast("Please enter a valid CVV (3-4 digits)", "error");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleDummyPayment = () => {
+    if (!validateForm()) {
+      return;
+    }
 
     setLoading(true);
-
-    try {
-      const userEmail = "customer@example.com";
-      const amount = calculateTotal() * 100;
-      const paymentParams: PaymentParams = {
-        email: userEmail,
-        amount,
-        publicKey: "pk_test_your_paystack_public_key", // Replace with your actual test public key
-        metadata: {
-          cartItems: JSON.stringify(cartItems),
-          customerId: "user_123",
-          orderId: `order_${Date.now()}`,
-        },
-      };
-
-      const paymentResult = await payWithPaystack(paymentParams);
-
-      if (paymentResult.success) {
-        showToast("Payment successful! Your order has been placed.", "success");
-      } else {
-        showToast(
-          paymentResult.message || "Payment failed. Please try again.",
-          "error"
-        );
-      }
-    } catch (error) {
-      console.error("Payment error:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "An unknown error occurred";
-      showToast(`Payment error: ${errorMessage}`, "error");
-    } finally {
+    setTimeout(() => {
       setLoading(false);
-    }
+      setShowPaymentModal(false);
+      showToast("Payment successful! Your order has been placed.", "success");
+      dispatch(clearCart());
+      setCardNumber("");
+      setExpiry("");
+      setCvv("");
+    }, 2000);
   };
 
   if (loading) {
@@ -480,182 +714,214 @@ export default function CartTabScreen() {
         visible={toastVisible}
         onDismiss={() => setToastVisible(false)}
       />
+      {showPaymentModal && (
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.6)",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 100,
+          }}
+        >
+          <View
+            style={{
+              width: "92%",
+              backgroundColor: isDarkMode ? "#181818" : "#fff",
+              borderRadius: 24,
+              padding: 28,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 16,
+              elevation: 8,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 22,
+                fontWeight: "700",
+                color: isDarkMode ? "#fff" : "#222",
+                marginBottom: 24,
+                textAlign: "center",
+                letterSpacing: 1.2,
+              }}
+            >
+              Card Payment
+            </Text>
+            <View style={{ marginBottom: 18 }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: isDarkMode ? "#aaa" : "#444",
+                  marginBottom: 6,
+                }}
+              >
+                Card Number
+              </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: isDarkMode ? "#222" : "#f5f5f5",
+                  borderRadius: 12,
+                  padding: 12,
+                }}
+              >
+                <Ionicons
+                  name="card-outline"
+                  size={22}
+                  color="#FF6347"
+                  style={{ marginRight: 10 }}
+                />
+                <TextInput
+                  style={{
+                    flex: 1,
+                    fontSize: 16,
+                    color: isDarkMode ? "#fff" : "#222",
+                  }}
+                  placeholder="1234 5678 9012 3456"
+                  placeholderTextColor={isDarkMode ? "#888" : "#aaa"}
+                  keyboardType="number-pad"
+                  maxLength={19}
+                  value={cardNumber}
+                  onChangeText={handleCardNumberChange}
+                />
+              </View>
+            </View>
+            <View style={{ flexDirection: "row", gap: 12, marginBottom: 24 }}>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: isDarkMode ? "#aaa" : "#444",
+                    marginBottom: 8,
+                  }}
+                >
+                  Expiry
+                </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    backgroundColor: isDarkMode ? "#222" : "#f5f5f5",
+                    borderRadius: 12,
+                    padding: 12,
+                  }}
+                >
+                  <Ionicons
+                    name="calendar-outline"
+                    size={20}
+                    color="#FF6347"
+                    style={{ marginRight: 10 }}
+                  />
+                  <TextInput
+                    style={{
+                      flex: 1,
+                      fontSize: 16,
+                      color: isDarkMode ? "#fff" : "#222",
+                    }}
+                    placeholder="MM/YY"
+                    placeholderTextColor={isDarkMode ? "#888" : "#aaa"}
+                    keyboardType="number-pad"
+                    maxLength={5}
+                    value={expiry}
+                    onChangeText={handleExpiryChange}
+                  />
+                </View>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: isDarkMode ? "#aaa" : "#444",
+                    marginBottom: 8,
+                  }}
+                >
+                  CVV
+                </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    backgroundColor: isDarkMode ? "#222" : "#f5f5f5",
+                    borderRadius: 12,
+                    padding: 12,
+                  }}
+                >
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={20}
+                    color="#FF6347"
+                    style={{ marginRight: 10 }}
+                  />
+                  <TextInput
+                    style={{
+                      flex: 1,
+                      fontSize: 16,
+                      color: isDarkMode ? "#fff" : "#222",
+                    }}
+                    placeholder="CVV"
+                    placeholderTextColor={isDarkMode ? "#888" : "#aaa"}
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    value={cvv}
+                    onChangeText={handleCvvChange}
+                    secureTextEntry
+                  />
+                </View>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#FF6347",
+                borderRadius: 12,
+                paddingVertical: 14,
+                alignItems: "center",
+                marginTop: 8,
+                shadowColor: "#FF6347",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.2,
+                shadowRadius: 8,
+                elevation: 4,
+              }}
+              onPress={handleDummyPayment}
+            >
+              <Text
+                style={{
+                  color: "#fff",
+                  fontSize: 18,
+                  fontWeight: "700",
+                  letterSpacing: 1,
+                }}
+              >
+                {loading
+                  ? "Processing..."
+                  : `Pay ₦${(
+                      calculateTotal() + (cartItems.length > 0 ? 2500 : 0)
+                    ).toLocaleString()}`}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ marginTop: 18, alignItems: "center" }}
+              onPress={() => setShowPaymentModal(false)}
+            >
+              <Text
+                style={{ color: isDarkMode ? "#aaa" : "#444", fontSize: 15 }}
+              >
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
-}
+  // Removed extra closing brace
 
-const getStyles = (isDarkMode: boolean) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: isDarkMode ? "#000" : "#f9fafb",
-    },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: isDarkMode ? "#000" : "#f9fafb",
-    },
-    loadingText: {
-      marginTop: 16,
-      fontSize: 16,
-      fontWeight: "500",
-    },
-    header: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: isDarkMode ? "#333" : "#e5e7eb",
-    },
-    headerTitle: {
-      fontSize: 22,
-      fontWeight: "700",
-    },
-    clearButton: {
-      color: "#FF6347",
-      fontSize: 14,
-      fontWeight: "500",
-    },
-    emptyContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      padding: 32,
-    },
-    emptyText: {
-      fontSize: 20,
-      fontWeight: "600",
-      marginTop: 16,
-      textAlign: "center",
-    },
-    emptySubtext: {
-      fontSize: 14,
-      marginTop: 8,
-      textAlign: "center",
-      maxWidth: 300,
-    },
-    itemsContainer: {
-      flex: 1,
-      padding: 16,
-    },
-    infoPill: {
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 12,
-      alignItems: "center",
-      justifyContent: "center",
-      marginRight: 6,
-      marginBottom: 4,
-      minWidth: 30,
-    },
-    itemCard: {
-      flexDirection: "row",
-      padding: 12,
-      marginBottom: 8,
-      borderRadius: 8,
-      alignItems: "center",
-    },
-    itemImage: {
-      width: 80,
-      height: 100,
-      borderRadius: 6,
-      marginRight: 12,
-    },
-    itemDetails: {
-      flex: 1,
-    },
-    itemName: {
-      fontSize: 15,
-      fontWeight: "500",
-      marginBottom: 4,
-    },
-    itemMeta: {
-      fontSize: 13,
-      color: "#666",
-      marginBottom: 2,
-    },
-    itemPrice: {
-      fontSize: 15,
-      fontWeight: "600",
-      marginTop: 4,
-    },
-    quantityContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      borderWidth: 1,
-      borderColor: "#e0e0e0",
-      borderRadius: 20,
-      alignSelf: "flex-start",
-      marginTop: 8,
-    },
-    quantityButton: {
-      padding: 4,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    quantityText: {
-      minWidth: 24,
-      textAlign: "center",
-      fontSize: 14,
-      fontWeight: "500",
-    },
-    removeButton: {
-      padding: 4,
-      marginLeft: 8,
-    },
-    summaryContainer: {
-      backgroundColor: isDarkMode ? "#1a1a1a" : "#fff",
-      padding: 20,
-      borderTopWidth: 1,
-      borderTopColor: isDarkMode ? "#333" : "#e5e7eb",
-    },
-    summaryRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      marginBottom: 8,
-    },
-    summaryLabel: {
-      fontSize: 14,
-      color: isDarkMode ? "#fff" : "#000",
-    },
-    summaryValue: {
-      fontSize: 14,
-      fontWeight: "500",
-      color: isDarkMode ? "#fff" : "#000",
-    },
-    divider: {
-      height: 1,
-      backgroundColor: isDarkMode ? "#333" : "#e5e7eb",
-      marginVertical: 12,
-    },
-    totalRow: {
-      marginTop: 4,
-    },
-    totalLabel: {
-      fontSize: 18,
-      fontWeight: "700",
-      color: isDarkMode ? "#fff" : "#000",
-    },
-    totalValue: {
-      fontSize: 18,
-      fontWeight: "700",
-      color: "#FF6347",
-    },
-    checkoutButton: {
-      backgroundColor: "#FF6347",
-      borderRadius: 8,
-      padding: 16,
-      flexDirection: "row",
-      justifyContent: "center",
-      alignItems: "center",
-      marginTop: 16,
-    },
-    checkoutButtonText: {
-      color: "#fff",
-      fontSize: 16,
-      fontWeight: "600",
-      marginRight: 8,
-    },
-  });
+  // getStyles moved above for correct usage
+}
