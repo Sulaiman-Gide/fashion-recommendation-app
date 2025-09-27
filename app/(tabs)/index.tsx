@@ -1,6 +1,5 @@
 import CartIcon from "@/assets/images/cart.svg";
 import FilterIcon from "@/assets/images/filter.svg";
-import PersonAvatar from "@/assets/images/personAvatar.svg";
 import CustomToast from "@/components/CustomToast";
 import { useTheme } from "@/context/ThemeContext";
 import { auth, db } from "@/lib/firebase";
@@ -205,7 +204,7 @@ export default function HomeTabScreen() {
               }}
             />
           </View>
-          <View style={styles.greetingColumn}>
+          <View>
             <SkeletonBox width={100} height={15} style={{ marginBottom: 6 }} />
             <SkeletonBox width={120} height={17} />
           </View>
@@ -562,10 +561,27 @@ export default function HomeTabScreen() {
                       resizeMode="cover"
                     />
                   ) : (
-                    <PersonAvatar width={88} height={88} />
+                    <View style={styles.initialsContainer}>
+                      <Text style={styles.initialsText}>
+                        {(() => {
+                          const name =
+                            userProfile?.name || authUser?.displayName || "U";
+                          // Get first letters of first and last name
+                          const nameParts = name.split(" ");
+                          const firstInitial = nameParts[0]
+                            ? nameParts[0][0].toUpperCase()
+                            : "";
+                          const lastInitial =
+                            nameParts.length > 1
+                              ? nameParts[nameParts.length - 1][0].toUpperCase()
+                              : "";
+                          return `${firstInitial}${lastInitial}` || "U";
+                        })()}
+                      </Text>
+                    </View>
                   )}
                 </View>
-                <View style={styles.greetingColumn}>
+                <View>
                   <Text style={styles.greetingText}>Welcome back,</Text>
                   <Text style={styles.userNameText}>
                     {userProfile?.name || authUser?.displayName || "User"}
@@ -895,12 +911,24 @@ const getStyles = (isDarkMode: boolean) =>
       width: 88,
       height: 88,
       borderRadius: 44,
-      borderWidth: 1,
-      borderColor: isDarkMode ? "#444" : "#ccc",
+      backgroundColor: "#FF6B6B",
+      justifyContent: "center",
+      alignItems: "center",
     },
-    greetingColumn: {
-      flexDirection: "column",
-      gap: 3,
+    initialsContainer: {
+      width: "100%",
+      height: "100%",
+      borderRadius: 44,
+      backgroundColor: "#FF6B6B",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    initialsText: {
+      color: "white",
+      fontSize: 24,
+      fontWeight: "bold",
+      textAlign: "center",
+      lineHeight: 40,
     },
     greetingText: {
       fontSize: 15,
