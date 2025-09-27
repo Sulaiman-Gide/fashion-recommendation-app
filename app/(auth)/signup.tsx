@@ -25,7 +25,7 @@ import { useDispatch } from "react-redux";
 import { auth, db } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
 
-const Signup: React.FC = () => {
+const Signup: React.FC = ({ navigation }: any) => {
   const router = useRouter();
   const dispatch = useDispatch();
   const animation = useRef<LottieView>(null);
@@ -101,6 +101,10 @@ const Signup: React.FC = () => {
       !fullName || !email || password.length < 2 || password !== confirmPassword
     );
   }, [fullName, email, password, confirmPassword]);
+
+  const handleGoLogin = () => {
+    navigation.navigate("Login");
+  };
 
   return (
     <>
@@ -234,7 +238,7 @@ const Signup: React.FC = () => {
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    onPress={() => router.navigate("/(auth)/login")}
+                    onPress={handleGoLogin}
                     style={styles.signupContainer}
                   >
                     <Text style={styles.signupText}>

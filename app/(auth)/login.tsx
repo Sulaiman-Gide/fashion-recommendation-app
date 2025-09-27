@@ -28,7 +28,7 @@ import { useDispatch } from "react-redux";
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 
-const Login = () => {
+const Login = ({ navigation }: any) => {
   const router = useRouter();
   const animation = useRef<LottieView>(null);
   const [email, setEmail] = useState<string>("");
@@ -94,6 +94,10 @@ const Login = () => {
   const isButtonDisabled = useMemo(() => {
     return !email || password.length < 3;
   }, [email, password]);
+
+  const handleGoSignup = () => {
+    navigation.navigate("Signup");
+  };
 
   return (
     <>
@@ -190,7 +194,7 @@ const Login = () => {
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    onPress={() => router.navigate("/(auth)/signup")}
+                    onPress={handleGoSignup}
                     style={styles.signupContainer}
                   >
                     <Text style={styles.signupText}>

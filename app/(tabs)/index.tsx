@@ -353,9 +353,32 @@ export default function HomeTabScreen() {
     ? new Date(userProfile.lastSeen).toLocaleString()
     : "Just now";
 
-  // Flash sale: first 6 products, rest: others
-  const flashSaleProducts = shuffledProducts.slice(0, 6);
-  const otherProducts = shuffledProducts.slice(6);
+  // Combined search and filter logic
+  const getFilteredProducts = () => {
+    let filtered = [...shuffledProducts];
+    // Apply filter
+    if (selectedFilter && selectedFilter !== "All") {
+      filtered = filtered.filter(
+        (product) =>
+          product.category &&
+          product.category.toLowerCase() === selectedFilter.toLowerCase()
+      );
+    }
+    // Apply search
+    if (searchQuery.trim() !== "") {
+      const q = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter(
+        (product) =>
+          (product.name && product.name.toLowerCase().includes(q)) ||
+          (product.description && product.description.toLowerCase().includes(q))
+      );
+    }
+    return filtered;
+  };
+
+  const filteredProducts = getFilteredProducts();
+  const flashSaleProducts = filteredProducts.slice(0, 6);
+  const otherProducts = filteredProducts.slice(6);
 
   if (loading) {
     const skeletonBg = isDarkMode ? "#2a2a2a" : "#e5e7eb";
