@@ -453,8 +453,12 @@ export default function ProductDetailScreen() {
           <View style={styles.brandRow}>
             <View style={styles.brandHeader}>
               <View style={styles.brandContainer}>
-                <Text style={styles.productBrand}>{product.brand}</Text>
-                <MaterialIcons name="verified" size={16} color="#16a34a" />
+                <Text style={styles.productName} numberOfLines={2}>
+                  {product.name}
+                </Text>
+                <View style={{ flex: 1, marginTop: 5, marginLeft: 5 }}>
+                  <MaterialIcons name="verified" size={20} color="#16a34a" />
+                </View>
               </View>
 
               {/* In Stock */}
@@ -477,9 +481,6 @@ export default function ProductDetailScreen() {
                   : "Out of stock"}
               </Text>
             </View>
-            <Text style={styles.productName} numberOfLines={2}>
-              {product.name}
-            </Text>
           </View>
 
           {/* Price Section */}
@@ -659,7 +660,7 @@ const getStyles = (isDarkMode: boolean) =>
     },
     optionText: {
       fontSize: 14,
-      color: isDarkMode ? "#e5e7eb" : "#4b5563",
+      color: isDarkMode ? "#111111ff" : "#4b5563",
       fontFamily: "BeVietnamPro-Medium",
     },
     optionTextSelected: {
@@ -673,7 +674,7 @@ const getStyles = (isDarkMode: boolean) =>
       borderColor: "transparent",
     },
     colorOptionSelected: {
-      borderColor: "#000",
+      borderColor: isDarkMode ? "#f3f4f6" : "#222",
       transform: [{ scale: 1.1 }],
     },
     quantityContainer: {
@@ -694,6 +695,7 @@ const getStyles = (isDarkMode: boolean) =>
       color: "#000",
     },
     quantityText: {
+      color: isDarkMode ? "#f3f4f6" : "#222",
       marginHorizontal: 16,
       fontSize: 18,
       fontFamily: "BeVietnamPro-SemiBold",
@@ -800,7 +802,6 @@ const getStyles = (isDarkMode: boolean) =>
       fontSize: 22,
       color: isDarkMode ? "#f3f4f6" : "#222",
       fontFamily: "BeVietnamPro-Regular",
-      flex: 1,
       flexWrap: "wrap",
     },
     priceRow: {

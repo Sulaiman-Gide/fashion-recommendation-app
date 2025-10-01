@@ -1,6 +1,8 @@
 import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import * as Haptics from "expo-haptics";
+import * as Notifications from "expo-notifications";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,10 +14,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-// Removed PaystackWebView import
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import CustomToast, { ToastType } from "../../components/CustomToast";
+import { useAuth } from "../../context/AuthContext";
+import { supabase } from "../../lib/supabase";
 import {
   CartItem,
   clearCart,
@@ -25,6 +28,17 @@ import {
 } from "../../store/cartSlice";
 
 export default function CartScreen() {
+  const { user } = useAuth();
+  useEffect(() => {
+    Notifications.requestPermissionsAsync();
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+  }, []);
   const { isDarkMode } = useTheme();
   const getStyles = (isDarkMode: boolean) =>
     StyleSheet.create({
@@ -311,7 +325,6 @@ export default function CartScreen() {
   };
 
   const handleCvvChange = (text: string) => {
-    // Only allow digits and limit to 4 characters
     const digits = text.replace(/\D/g, "").slice(0, 4);
     setCvv(digits);
   };
@@ -339,21 +352,81 @@ export default function CartScreen() {
     return true;
   };
 
-  const handleDummyPayment = () => {
+  // Helper to get user name
+  const getUserName = () => {
+    // Try Firebase user displayName, fallback to email prefix
+    if (user?.displayName) return user.displayName;
+    if (user?.email) return user.email.split("@")[0];
+    return "User";
+  };
+
+  // Helper to get product names (for notification)
+  const getProductNames = () => {
+    if (!cartItems || cartItems.length === 0) return "your items";
+    if (cartItems.length === 1) return cartItems[0].name;
+    return cartItems.map((item) => item.name).join(", ");
+  };
+
+  // Payment handler with Supabase and notification
+  const handleDummyPayment = async () => {
     if (!validateForm()) {
       return;
     }
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // Simulate payment delay
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Prepare activity data
+      const activityData = {
+        user_id: user?.uid || null,
+        user_name: getUserName(),
+        products: cartItems.map(
+          ({ id, name, price, quantity, size, color }) => ({
+            id,
+            name,
+            price,
+            quantity,
+            size,
+            color,
+          })
+        ),
+        total_amount: calculateTotal() + (cartItems.length > 0 ? 2500 : 0),
+        status: "success",
+        created_at: new Date().toISOString(),
+      };
+
+      // Insert into Supabase activity table
+      const { error } = await supabase.from("activity").insert([activityData]);
+      if (error) {
+        showToast("Payment succeeded but failed to log activity.", "error");
+        console.log("Supabase insert error:", error);
+      } else {
+        showToast("Payment successful! Your order has been placed.", "success");
+      }
+
+      // Local notification with sound and vibration
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `Dear ${getUserName()}`,
+          body: `Thank you for purchasing ${getProductNames()}. Your payment is successful.`,
+          sound: true,
+        },
+        trigger: null,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
       setShowPaymentModal(false);
-      showToast("Payment successful! Your order has been placed.", "success");
       dispatch(clearCart());
       setCardNumber("");
       setExpiry("");
       setCvv("");
-    }, 2000);
+    } catch (err) {
+      showToast("Payment failed. Please try again.", "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {

@@ -1,4 +1,3 @@
-import PersonAvatar from "@/assets/images/personAvatar.svg";
 import CustomToast from "@/components/CustomToast";
 import { useTheme } from "@/context/ThemeContext";
 import { auth, db } from "@/lib/firebase";
@@ -167,7 +166,28 @@ export default function ProfileTabScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.headerCard}>
           <View style={styles.avatarContainer}>
-            <PersonAvatar width={88} height={88} />
+            <View style={styles.row}>
+              <View style={styles.avatarContainer}>
+                <View style={styles.initialsContainer}>
+                  <Text style={styles.initialsText}>
+                    {(() => {
+                      const name =
+                        userProfile?.name || authUser?.displayName || "U";
+                      // Get first letters of first and last name
+                      const nameParts = name.split(" ");
+                      const firstInitial = nameParts[0]
+                        ? nameParts[0][0].toUpperCase()
+                        : "";
+                      const lastInitial =
+                        nameParts.length > 1
+                          ? nameParts[nameParts.length - 1][0].toUpperCase()
+                          : "";
+                      return `${firstInitial}${lastInitial}` || "U";
+                    })()}
+                  </Text>
+                </View>
+              </View>
+            </View>
           </View>
           <Text style={styles.nameText}>
             {userProfile?.name || authUser?.displayName || "User"}
@@ -244,6 +264,31 @@ const getStyles = (isDarkMode: boolean) =>
     container: {
       flex: 1,
       backgroundColor: isDarkMode ? "#000" : "#f9fafb",
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    initialsContainer: {
+      width: "100%",
+      height: "100%",
+      borderRadius: 44,
+      backgroundColor: "#FF6B6B",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    initialsText: {
+      color: "white",
+      fontSize: 24,
+      fontWeight: "bold",
+      textAlign: "center",
+      lineHeight: 40,
+    },
+    greetingText: {
+      fontSize: 15,
+      fontFamily: "BeVietnamPro-Medium",
+      color: isDarkMode ? "#fff" : "#111",
     },
     loadingContainer: {
       flex: 1,

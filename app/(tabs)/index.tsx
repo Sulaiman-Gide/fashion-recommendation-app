@@ -292,7 +292,7 @@ export default function HomeTabScreen() {
       setProducts(data || []);
       setShuffledProducts(data ? shuffleArray(data) : []);
       // Debug log to help verify fetched products
-      console.log("Fetched products:", data);
+      //console.log("Fetched products:", data);
     } catch (error) {
       console.error("Error fetching products:", error);
     } finally {
@@ -304,8 +304,6 @@ export default function HomeTabScreen() {
   useEffect(() => {
     fetchProducts();
   }, []);
-
-  console.log("Productssssss", products);
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -571,9 +569,13 @@ export default function HomeTabScreen() {
                           const firstInitial = nameParts[0]
                             ? nameParts[0][0].toUpperCase()
                             : "";
-                          const lastInitial =
+                          const lastNamePart =
                             nameParts.length > 1
-                              ? nameParts[nameParts.length - 1][0].toUpperCase()
+                              ? nameParts[nameParts.length - 1]
+                              : "";
+                          const lastInitial =
+                            lastNamePart && lastNamePart[0]
+                              ? lastNamePart[0].toUpperCase()
                               : "";
                           return `${firstInitial}${lastInitial}` || "U";
                         })()}
@@ -750,13 +752,13 @@ export default function HomeTabScreen() {
                                 maximumFractionDigits: 0,
                               })}
                             </Text>
-                            <Text style={styles.productOldPrice}>
+                            {/** <Text style={styles.productOldPrice}>
                               ₦
                               {(
                                 product.price -
                                 product.price * 0.08297
                               ).toFixed(2)}
-                            </Text>
+                            </Text> **/}
                           </View>
                         </View>
                       </TouchableOpacity>
