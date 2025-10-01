@@ -393,7 +393,7 @@ export default function CartScreen() {
           })
         ),
         total_amount: calculateTotal() + (cartItems.length > 0 ? 2500 : 0),
-        status: "success",
+        status: "payment: payment_successfull",
         created_at: new Date().toISOString(),
       };
 

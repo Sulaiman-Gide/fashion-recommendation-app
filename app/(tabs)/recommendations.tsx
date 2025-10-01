@@ -1,6 +1,6 @@
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
-import { getRecommendedProducts } from "@/lib/recommendations";
+import { supabase } from "@/lib/supabase";
 import { Product } from "@/types";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -36,14 +36,83 @@ export default function RecommendationsScreen() {
 
   useEffect(() => {
     if (user) {
-      fetchRecommendations();
+      fetchPersonalizedRecommendations();
     }
   }, [user]);
 
-  const fetchRecommendations = async () => {
+  // Personalized recommendation logic
+  const fetchPersonalizedRecommendations = async () => {
     try {
       setLoading(true);
-      const recommended = await getRecommendedProducts(user?.uid || "");
+      // 1. Fetch recent activity (views and purchases)
+      const { data: activity } = await supabase
+        .from("activity")
+        .select("products, status")
+        .eq("user_id", user?.uid)
+        .order("created_at", { ascending: false })
+        .limit(30);
+
+      // 2. Count category and product frequency
+      let viewedProductIds: string[] = [];
+      let purchasedProductIds: string[] = [];
+      if (activity) {
+        for (const act of activity) {
+          const ids = (act.products || []).map((p: any) => p.id);
+          if (act.status === "success") purchasedProductIds.push(...ids);
+          else if (act.status === "view") viewedProductIds.push(...ids);
+        }
+      }
+
+      // 3. Get categories of viewed/purchased products
+      const allProductIds = Array.from(
+        new Set([...viewedProductIds, ...purchasedProductIds])
+      );
+      let categoryCount: Record<string, number> = {};
+      if (allProductIds.length) {
+        const { data: productsMeta } = await supabase
+          .from("products")
+          .select("id, category")
+          .in("id", allProductIds);
+        productsMeta?.forEach((p) => {
+          if (p.category)
+            categoryCount[p.category] = (categoryCount[p.category] || 0) + 1;
+        });
+      }
+      const sortedCategories = Object.keys(categoryCount).sort(
+        (a, b) => categoryCount[b] - categoryCount[a]
+      );
+
+      // 4. Recommend products from top categories, not already purchased
+      let recommended: any[] = [];
+      if (sortedCategories.length) {
+        const { data } = await supabase
+          .from("products")
+          .select("*")
+          .in("category", sortedCategories)
+          .not("id", "in", purchasedProductIds)
+          .order("view_count", { ascending: false })
+          .limit(12);
+        recommended = data || [];
+      }
+
+      // 5. Fallback: trending products
+      if (!recommended.length) {
+        const { data } = await supabase
+          .from("products")
+          .select("*")
+          .order("view_count", { ascending: false })
+          .limit(12);
+        recommended = data || [];
+      }
+
+      // 6. Add matchScore for UI
+      recommended = recommended.map((p) => ({
+        ...p,
+        matchScore:
+          p.category && categoryCount[p.category]
+            ? Math.min(100, 60 + categoryCount[p.category] * 10)
+            : 50,
+      }));
       setProducts(recommended);
     } catch (error) {
       console.error("Error fetching recommendations:", error);

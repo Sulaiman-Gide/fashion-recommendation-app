@@ -73,26 +73,21 @@ export default function ProductDetailScreen() {
       if (error) throw error;
       setProduct(data);
 
-      // Track product view for recommendations
-      if (user?.uid) {
-        await supabase
-          .from("user_activity")
-          .upsert(
-            {
-              user_id: user.uid,
-              product_id: id,
-              last_viewed: new Date().toISOString(),
-              view_count: 1,
-            },
-            {
-              onConflict: "user_id,product_id",
-              count: "exact",
-            }
-          )
-          .select();
+      // Send product view in activity table for recommendations
+      if (user?.uid && data) {
+        await supabase.from("activity").insert([
+          {
+            user_id: user.uid,
+            user_name: user.displayName || user.email || "User",
+            products: [{ id: data.id, name: data.name }],
+            total_amount: data.price,
+            status: "view",
+            created_at: new Date().toISOString(),
+          },
+        ]);
       }
     } catch (error) {
-      console.error("Error fetching product:", error);
+      console.log("Error fetching product:", error);
     } finally {
       setLoading(false);
     }
