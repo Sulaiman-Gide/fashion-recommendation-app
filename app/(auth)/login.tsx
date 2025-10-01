@@ -25,8 +25,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch } from "react-redux";
 
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { generateToken } from "@/lib/Token";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, updateDoc } from "firebase/firestore";
 
 const Login = ({ navigation }: any) => {
   const router = useRouter();
@@ -46,7 +48,6 @@ const Login = ({ navigation }: any) => {
 
   const handleLogin = useCallback(async () => {
     setIsLoading(true);
-
     try {
       const userCredential = await signInWithEmailAndPassword(
         auth,
@@ -54,6 +55,11 @@ const Login = ({ navigation }: any) => {
         password
       );
       const user = userCredential.user;
+
+      const token = generateToken();
+      try {
+        await updateDoc(doc(db, "users", user.uid), { token });
+      } catch (e) {}
 
       await SecureStore.setItemAsync("uid", user.uid);
       dispatch(setAuthenticated(true));
@@ -66,10 +72,7 @@ const Login = ({ navigation }: any) => {
 
       router.replace("/(tabs)");
     } catch (error: any) {
-      //console.error("Login error:", error);
-
       let message = "Login failed. Please try again.";
-
       if (error.code === "auth/invalid-email") {
         message = "Invalid email address.";
       } else if (error.code === "auth/user-not-found") {
@@ -79,11 +82,9 @@ const Login = ({ navigation }: any) => {
       } else if (error.code === "auth/network-request-failed") {
         message = "Network error. Please check your connection.";
       }
-
       setToastMessage(message);
       setToastType("error");
       setToastVisible(true);
-
       dispatch(setAuthenticated(false));
       dispatch(setToken(null));
     } finally {

@@ -23,6 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch } from "react-redux";
 
 import { auth, db } from "@/lib/firebase";
+import { generateToken } from "@/lib/Token";
 import { doc, setDoc } from "firebase/firestore";
 
 const Signup: React.FC = ({ navigation }: any) => {
@@ -54,12 +55,15 @@ const Signup: React.FC = ({ navigation }: any) => {
 
       const user = userCredential.user;
 
+      const token = generateToken();
+
       await updateProfile(user, { displayName: fullName });
       await setDoc(doc(db, "users", user.uid), {
         fullName,
         email,
         createdAt: new Date().toISOString(),
         lastSeen: new Date().toISOString(),
+        token,
       });
 
       await SecureStore.setItemAsync("uid", user.uid);
@@ -72,10 +76,7 @@ const Signup: React.FC = ({ navigation }: any) => {
       //console.log("Signup successful:", user);
       router.replace("/(tabs)");
     } catch (error: any) {
-      //console.error("Signup error:", error);
-
       let message = "Signup failed. Please try again.";
-
       if (error.code === "auth/email-already-in-use") {
         message = "An account already exists with this email.";
       } else if (error.code === "auth/invalid-email") {
@@ -87,7 +88,6 @@ const Signup: React.FC = ({ navigation }: any) => {
       } else if (error.code === "auth/operation-not-allowed") {
         message = "This signup method is currently disabled.";
       }
-
       setToastMessage(message);
       setToastType("error");
       setToastVisible(true);

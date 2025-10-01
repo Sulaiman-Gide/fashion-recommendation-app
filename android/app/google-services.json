@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "775830764781",
+    "project_id": "ecommerce-bea43",
+    "storage_bucket": "ecommerce-bea43.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:775830764781:android:d55b80cf21216313f7a0e4",
+        "android_client_info": {
+          "package_name": "com.devgide.fashionApp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "775830764781-uisu6s8ci2586b1ksjmo00rjikk1704s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAujJTmxSDW-5uppHBG3YZfHqpyOkIm0cc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "775830764781-uisu6s8ci2586b1ksjmo00rjikk1704s.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

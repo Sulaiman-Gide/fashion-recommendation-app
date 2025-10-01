@@ -145,11 +145,11 @@ export default function RecommendationsScreen() {
           style={styles.productImage}
           resizeMode="cover"
         />
-        {product.matchScore && (
+        {/** {product.matchScore && (
           <View style={styles.matchBadge}>
             <Text style={styles.matchText}>{product.matchScore}% match</Text>
           </View>
-        )}
+        )} **/}
       </View>
       <View style={styles.productInfo}>
         <Text style={styles.productName} numberOfLines={1}>

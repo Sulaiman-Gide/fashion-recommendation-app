@@ -7,11 +7,12 @@ import { supabase } from "@/lib/supabase";
 import { setAuthenticated, setToken } from "@/store/authSlice";
 import { persistor } from "@/store/store";
 import { AntDesign } from "@expo/vector-icons";
+import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -52,6 +53,32 @@ export default function HomeTabScreen() {
   const [countdown, setCountdown] = useState("00:00:00");
   const { isDarkMode } = useTheme();
   const styles = getStyles(isDarkMode);
+
+  const wasAuthenticated = useRef(false);
+  const notificationShown = useRef(false);
+  useEffect(() => {
+    const isAuthenticated = !!(userProfile || authUser);
+    if (
+      isAuthenticated &&
+      !wasAuthenticated.current &&
+      !notificationShown.current
+    ) {
+      const name = userProfile?.name || authUser?.displayName || "User";
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title: `Hi, Welcome ${name}!`,
+          body: "Welcome to Elegant Outfits, Your adaptive personal fashion recommendation app.",
+          sound: true,
+        },
+        trigger: null,
+      });
+      notificationShown.current = true;
+    }
+    if (!isAuthenticated) {
+      notificationShown.current = false;
+    }
+    wasAuthenticated.current = isAuthenticated;
+  }, [userProfile, authUser]);
 
   // Skeleton loader for product cards
   const ProductSkeleton = () => {

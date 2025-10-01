@@ -1,9 +1,11 @@
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { useFirebaseAuthListener } from "@/hooks/useFirebaseAuthListener";
+import { useRegisterForPushNotifications } from "@/lib/useRegisterForPushNotifications";
 import { rehydrate } from "@/store/authSlice";
 import { persistor, store } from "@/store/store";
 import { useFonts } from "expo-font";
+import * as Notifications from "expo-notifications";
 import { Slot } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -41,8 +43,19 @@ function PersistGateWrapper({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
-  const [appReady, setAppReady] = useState(false);
+  // Register for push notifications
+  useRegisterForPushNotifications();
 
+  // Set notification handler globally
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+
+  const [appReady, setAppReady] = useState(false);
   const [fontsLoaded] = useFonts({
     "BeVietnamPro-Regular": require("../assets/fonts/BeVietnamPro-Regular.ttf"),
     "BeVietnamPro-Bold": require("../assets/fonts/BeVietnamPro-Bold.ttf"),
